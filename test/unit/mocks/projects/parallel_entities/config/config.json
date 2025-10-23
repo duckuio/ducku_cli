@@ -1,0 +1,13 @@
+{
+    "json_key1": [
+        "list_item1",
+        "list_item2",
+        "list_item3"
+    ],
+    "json_key2": "string_value",
+    "json_key3": {
+        "nested_key1": 123,
+        "nested_key2": true,
+        "string_key": "string_value"
+    }
+}

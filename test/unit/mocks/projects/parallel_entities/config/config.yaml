@@ -1,0 +1,7 @@
+root:
+  yaml_key: root_value
+  entities:
+    - name: entity1
+      yaml_key: entity1_value
+    - name: entity2
+      yaml_key: entity2_value
