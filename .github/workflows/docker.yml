@@ -116,16 +116,48 @@ jobs:
   test-published-image:
     needs: [build-and-push]
     runs-on: ubuntu-latest
-    container: yarax/ducku:latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
-      - name: Checkout repository for testing
-        uses: actions/checkout@v4
+      - name: Wait for image to be available
+        run: sleep 30
 
-      - name: Test ducku on current project
-        env:
-          PROJECT_PATH: ${{ github.workspace }}
-        run: ducku
+      - name: Test published Docker image with sample project
+        run: |
+          # Create a test project
+          mkdir -p /tmp/test-project
+          cd /tmp/test-project
+          
+          echo "# Test Project" > README.md
+          echo "This project uses port 8080" >> README.md
+          echo "See ./docs/guide.md for more info" >> README.md
+          echo "Configuration file: ./config/app.yaml" >> README.md
+          
+          mkdir -p docs config
+          echo "# User Guide" > docs/guide.md
+          echo "API endpoint: /api/v1" >> docs/guide.md
+          
+          echo "server:" > config/app.yaml
+          echo "  port: 8080" >> config/app.yaml
+          echo "  host: localhost" >> config/app.yaml
+          
+          # Test ducku on this project
+          echo "Testing ducku on sample project..."
+          docker run --rm \
+            -v /tmp/test-project:/workspace \
+            -e PROJECT_PATH=/workspace \
+            yarax/ducku:latest
+
+      - name: Test published Docker image with current repository
+        run: |
+          # Clone the repository to test on actual project
+          git clone https://github.com/${{ github.repository }}.git /tmp/repo-test
+          cd /tmp/repo-test
+          
+          echo "Testing ducku on actual repository..."
+          docker run --rm \
+            -v /tmp/repo-test:/workspace \
+            -e PROJECT_PATH=/workspace \
+            yarax/ducku:latest
 
   # Optional: Security scanning
   security-scan:
