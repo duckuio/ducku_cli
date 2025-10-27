@@ -5,8 +5,6 @@ Ducku is a static documentation quality tool
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-DSAL-orange.svg)](LICENSE)
 
-⚠️ **License Notice**: This software is licensed under the Ducku Source Available License (DSAL). While free for personal and internal use, commercial documentation tools and services are prohibited from using this software. See [LICENSE](LICENSE) for details.
-
 [ This documentation was checked by Ducku ]
 
 **Ducku** is a documentation analysis and code quality CLI tool designed to help developers maintain clean, consistent, and up-to-date codebases. It automatically scans projects to identify issues like outdated documentation references, unused modules, and inconsistencies between code and documentation.
