@@ -1,8 +1,30 @@
 [project]
-name = "wiki5"
+name = "ducku"
 version = "0.1.0"
-description = "Add your description here"
+description = "Documentation analysis and code quality tool for multi-language projects"
 readme = "README.md"
+license = {text = "Ducku Source Available License (DSAL)"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+maintainers = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["documentation", "code-analysis", "static-analysis", "dead-code", "linting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Utilities",
+]
 requires-python = ">=3.13"
 dependencies = [
     "anytree>=2.13.0",
@@ -13,9 +35,19 @@ dependencies = [
     "rapidfuzz>=3.14.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/duckuio/ducku_cli"
+Repository = "https://github.com/duckuio/ducku_cli"
+Issues = "https://github.com/duckuio/ducku_cli/issues"
+Documentation = "https://github.com/duckuio/ducku_cli#readme"
+
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
+]
+build = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
 
 [build-system]
@@ -30,4 +62,4 @@ pythonpath = [
     "."
 ]
 [project.scripts]
-documentary = "bin.cli:main"
+ducku = "bin.cli:main"

@@ -1,0 +1,66 @@
+Ducku Source Available License (DSAL)
+
+Copyright (c) 2025 Ducku Contributors
+
+This license is a source-available license that allows you to use, modify and distribute this software for most purposes, but with specific restrictions on commercial documentation service offerings.
+
+## Permitted Uses
+
+You are free to:
+- Use this software to analyze and check documentation quality for any project
+- Modify the software for your own use
+- Distribute the software and your modifications
+- Use the software in commercial environments for checking your own documentation
+- Include the software in open source projects
+- Use the software for educational, research, or personal purposes
+
+## Restrictions
+
+You may NOT:
+- Offer the software as a commercial service for documentation analysis, writing, or improvement
+- Integrate this software into commercial tools, platforms, or services that are primarily focused on:
+  - Documentation writing assistance
+  - Documentation quality analysis as a service
+  - Documentation automation tools
+  - Technical writing platforms
+  - Content management systems focused on documentation
+  - Any service where documentation analysis is a core commercial offering
+
+## Commercial Documentation Service Definition
+
+A "Commercial Documentation Service" means any service, platform, or tool that:
+1. Charges users (directly or indirectly) for documentation-related functionality, AND
+2. Uses this software to provide documentation analysis, checking, writing assistance, or improvement features
+
+This includes but is not limited to:
+- SaaS platforms that analyze documentation quality
+- Commercial documentation writing tools
+- Paid documentation automation services
+- Enterprise documentation management platforms that include analysis features
+
+## Exceptions
+
+The following are explicitly permitted:
+- Using this software internally within a company to check their own documentation
+- Including this software in CI/CD pipelines for internal quality checks
+- Distributing this software as part of development tools where documentation checking is a secondary feature
+- Using this software in consulting services where you're helping clients improve their own documentation practices
+
+## Copyleft Provision
+
+If you distribute this software or any derivative works, you must:
+1. Include this license
+2. Make the source code available under this same license
+3. Clearly indicate any changes you made to the original software
+
+## No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Contact
+
+For questions about licensing or to request permission for uses not covered by this license, please contact the Ducku Contributors.
+
+---
+
+This license is inspired by the MongoDB Server Side Public License (SSPL) and is designed to keep Ducku freely available for most users while preventing commercial exploitation by documentation service providers.

@@ -1,3 +1,3 @@
 """
-This module contains CLI scripts for the wiki5 package.
+This module contains CLI scripts for the ducku package.
 """

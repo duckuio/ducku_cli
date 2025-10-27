@@ -16,6 +16,9 @@ def unknown_tag_handler(loader, tag_suffix, node):
 IgnoreUnknownTagsLoader.add_multi_constructor('', unknown_tag_handler)
 
 def is_corrupted(value):
+    # Convert to string if not already a string
+    if not isinstance(value, str):
+        value = str(value)
     return "\n" in value or len(value) > 50
 
 def collect_key_values(data, parallel_entities, parent):
@@ -25,21 +28,21 @@ def collect_key_values(data, parallel_entities, parent):
     if isinstance(data, dict):
         for key, value in data.items():
             if not is_corrupted(key):
-                key_items.append(Entity(key))
-            if isinstance(value, str):
+                key_items.append(Entity(str(key)))
+            if isinstance(value, (str, int, float, bool)):
                 if not is_corrupted(value):
-                    value_items.append(Entity(value))
+                    value_items.append(Entity(str(value)))
             else:
-                collect_key_values(value, parallel_entities, parent + "::" + key)
+                collect_key_values(value, parallel_entities, parent + "::" + str(key))
         if key_items.entities:
             parallel_entities.append(key_items)
         if value_items.entities:
             parallel_entities.append(value_items)
     elif isinstance(data, list):
         for value in data:
-            if isinstance(value, str):
+            if isinstance(value, (str, int, float, bool)):
                 if not is_corrupted(value):
-                    value_items.append(Entity(value))
+                    value_items.append(Entity(str(value)))
             else:
                 collect_key_values(value, parallel_entities, parent)
         if value_items.entities:

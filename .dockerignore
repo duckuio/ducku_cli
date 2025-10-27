@@ -1,0 +1,59 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Documentation build
+docs/_build/
+
+# Temporary files
+*.tmp
+*.log
+temp/
+tmp/
+
+# Test files (we don't need them in the container)
+test/
+tests/
+
+# Scripts (not needed for runtime)
+scripts/
+
+# Distribution files
+DISTRIBUTION.md
+
+# Docker files (avoid recursion)
+Dockerfile*
+.dockerignore
+
+# Development files
+*.md
+!README.md

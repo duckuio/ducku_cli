@@ -1,4 +1,6 @@
+from src.core.base_usecase import BaseUseCase
 from src.core.documentation import Source
+from src.core.project import Project
 from src.core.search_pattern import SearchPattern
 
 exts = (
@@ -9,7 +11,6 @@ exts = (
 )
 
 path_patterns = [
-    # @TODO things like ./file.txt can be prepared over cd PATH.
     SearchPattern(
         "Unix path",
         rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
@@ -44,54 +45,61 @@ class Artifact:
         self.pattern: SearchPattern = pattern
         self.match: str = match # pattern match
         self.source: Source = source
+        
+class PatternSearch(BaseUseCase):
 
-def collect_docs_artifacts(p, patterns: list[SearchPattern]) -> list[Artifact]:
-    artefacts = []
-    cache = {}
-    for pattern in patterns:
-        for dp in p.documentation.doc_parts:
-            try:
-                # Skip binary files or files with non-text content
-                content = dp.read()
-                if '\0' in content or sum(1 for c in content[:1000] if ord(c) < 32 and c not in '\n\r\t') > 30:
-                    continue
-                
-                matches = pattern.find_all(dp)
-                for m in matches:
-                    match = m.group(0)
-                    # Skip artifacts that contain control characters
-                    if sum(1 for c in match if ord(c) < 32 and c not in '\n\r\t') > 0:
-                        continue
-                    if match not in cache: # don't collect duplicates
-                        cache[match] = Artifact(
-                            pattern=pattern,
-                            match=match,
-                            source=dp.source,
-                        )
-                        artefacts.append(cache[match])
-                    cache[match] = True
-            except (UnicodeError, ValueError, OSError):
-                # Skip files that can't be processed
+    def __init__(self, project: Project):
+        super().__init__(project)
+
+    def collect_docs_artifacts(self, patterns: list[SearchPattern]) -> list[Artifact]:
+        artefacts = []
+        cache = {}
+        for pattern in patterns:
+            if self.project.config.disabled_pattern_search_patterns and pattern.name in self.project.config.disabled_pattern_search_patterns:
                 continue
-    return artefacts
+            for dp in self.project.documentation.doc_parts:
+                try:
+                    # Skip binary files or files with non-text content
+                    content = dp.read()
+                    if '\0' in content or sum(1 for c in content[:1000] if ord(c) < 32 and c not in '\n\r\t') > 30:
+                        continue
+                    
+                    matches = pattern.find_all(dp)
+                    for m in matches:
+                        match = m.group(0)
+                        # Skip artifacts that contain control characters
+                        if sum(1 for c in match if ord(c) < 32 and c not in '\n\r\t') > 0:
+                            continue
+                        if match not in cache: # don't collect duplicates
+                            cache[match] = Artifact(
+                                pattern=pattern,
+                                match=match,
+                                source=dp.source,
+                            )
+                            artefacts.append(cache[match])
+                        cache[match] = True
+                except (UnicodeError, ValueError, OSError):
+                    # Skip files that can't be processed
+                    continue
+        return artefacts
 
-def report(p):
-    result = ""
+    def report(self):
+        result = ""
 
-    artifacts = collect_docs_artifacts(p, string_patterns)
-    for artifact in artifacts:
-        if not p.contains_string(artifact.match):
-            result += f"String '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
+        artifacts = self.collect_docs_artifacts(string_patterns)
+        for artifact in artifacts:
+            if not self.project.contains_string(artifact.match):
+                result += f"String '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
 
-    artifacts = collect_docs_artifacts(p, path_patterns)
-    for artifact in artifacts:
-        found = p.contains_path(artifact.match, artifact.source)
-        if not found:
-            result += f"Path '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
+        artifacts = self.collect_docs_artifacts(path_patterns)
+        for artifact in artifacts:
+            found = self.project.contains_path(artifact.match, artifact.source)
+            if not found:
+                result += f"Path '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
 
-    artifacts = collect_docs_artifacts(p, files_patterns)
-    for artifact in artifacts:
-        found = p.contains_file(artifact.match)
-        if not found:
-            result += f"File '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
-    return result
+        artifacts = self.collect_docs_artifacts(files_patterns)
+        for artifact in artifacts:
+            found = self.project.contains_file(artifact.match)
+            if not found:
+                result += f"File '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
+        return result

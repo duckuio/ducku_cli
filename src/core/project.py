@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from src.core.configuration import parse_documentory_yaml
+from src.core.configuration import parse_ducku_yaml, Configuration
 from src.core.documentation import Documentation, Source
 
 folders_to_skip = [
@@ -54,9 +54,9 @@ class Project:
         self.project_root = project_root
         self.doc_paths: list[Path] = []
         self.documentation: Documentation
-        self.config = parse_documentory_yaml(project_root)
-        if self.config and "documentation_paths" in self.config:
-            for p in self.config["documentation_paths"]:
+        self.config = parse_ducku_yaml(project_root)
+        if self.config and self.config.documentation_paths:
+            for p in self.config.documentation_paths:
                 if Path(p).is_absolute():
                     self.doc_paths.append(Path(p))
                 else:

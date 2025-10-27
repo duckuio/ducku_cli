@@ -1,0 +1,22 @@
+# YAML Schema for .ducku.yaml
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Ducku Config"
+type: object
+properties:
+  documentation_paths:
+    type: array
+    items:
+      type: string
+    description: "Optional paths to folders with additional markdown files."
+  disabled_use_cases:
+    type: array
+    items:
+      type: string
+    description: "Use cases to disable"
+  disabled_pattern_search_patterns:
+    type: array
+    items:
+      type: string
+    description: "Disabled patterns for the use case pattern_search"
+required: []
+additionalProperties: false

@@ -2,28 +2,33 @@ import os
 import traceback
 
 def start(base):
-    from src.use_cases.partial import report as partial_report
-    from src.use_cases.pattern_search import report as patterns_report
+    from src.use_cases.partial_lists import PartialMatch 
+    from src.use_cases.pattern_search import PatternSearch
+    from src.use_cases.unused_modules import UnusedModules
     from src.core.project import Project
 
     if not os.path.isdir(base):
         print(f"Path {base} doesn't exist")
         exit()
     try:
-        ucases_to_run = [
-            #partial_report,
-            patterns_report
+        use_cases_to_run = [
+            PartialMatch,
+            PatternSearch,
+            UnusedModules
         ]
         p = Project(base)
-        for uc in ucases_to_run:
-            r = uc(p)
+        for uc in use_cases_to_run:
+            uci = uc(p)
+            if p.config.disabled_use_cases and uci.name in p.config.disabled_use_cases:
+                continue
+            r = uci.report()
             print(r)
     except Exception as e:
         print(e)
         traceback.print_exc()
 
 def main():
-    """Entry point for the documentary CLI."""
+    """Entry point for the ducku CLI."""
     MULTI_FOLDER = os.getenv("MULTI_FOLDER")
     PROJECT_PATH = os.getenv("PROJECT_PATH")
     if MULTI_FOLDER:
