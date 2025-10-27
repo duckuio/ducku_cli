@@ -70,16 +70,27 @@ Then `ducku` binary will be available globally
 Example of usage in CI/CD (GitLab):
 
 ```yaml
-deploy:
+documentation_check:
     image: yarax/ducku:latest
-    stage: deploy
+    stage: quality
     variables:
         PROJECT_PATH: "$CI_PROJECT_DIR"
     script:
         - ducku
 ```
 
-Also feel free to utilize `Dockerfile` to build and use your own image.
+Example for GitHub Actions:
+
+```yaml
+- name: Documentation Quality Check
+  run: |
+    docker run --rm \
+      -v ${{ github.workspace }}:/workspace \
+      -e PROJECT_PATH=/workspace \
+      yarax/ducku:latest
+```
+
+Also feel free to utilize [`Dockerfile`](Dockerfile) to build and use your own image.
 
 ## Usage 🚀
 
