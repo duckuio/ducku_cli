@@ -5,10 +5,10 @@ description = "Documentation analysis and code quality tool for multi-language p
 readme = "README.md"
 license = {text = "Ducku Source Available License (DSAL)"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Roman Krivtsov", email = ""}
 ]
 maintainers = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Roman Krivtsov", email = ""}
 ]
 keywords = ["documentation", "code-analysis", "static-analysis", "dead-code", "linting"]
 classifiers = [
