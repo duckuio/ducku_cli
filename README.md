@@ -65,15 +65,10 @@ Languages support:
 pip install ducku
 ```
 
-After installation, the `ducku` command will be available globally:
+Then `ducku` binary will be available globally
 
-```bash
-ducku --help
-```
+### Using in CI/CD
 
-### Using Docker
-
-Feel free to use `Dockerfile` to build and use the image.
 Example of usage in CI/CD (GitLab):
 
 ```yaml
@@ -85,6 +80,8 @@ deploy:
     script:
         - ducku
 ```
+
+Also feel free to utilize `Dockerfile` to build and use your own image.
 
 ## Usage 🚀
 
