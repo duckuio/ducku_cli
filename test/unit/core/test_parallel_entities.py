@@ -27,7 +27,8 @@ def test_parallel_files_entities():
         ['root'], 
         ['config', 'config'], 
         ['models', 'controllers'], 
-        ['user', 'article']
+        ['user', 'article'],
+        ['.gitkeep']  # Added to make controllers directory non-empty for cross-platform consistency
     ]
     
     # Compare length first
@@ -41,6 +42,15 @@ def test_parallel_files_entities():
         else:
             # For single items or empty lists, exact match is fine
             assert actual == expect, f"At index {i}, exact match required: {actual} vs {expect}"
+    
+    # Additional verification: ensure certain key entities are present
+    all_entities = [item for sublist in dump for item in sublist]
+    assert 'config' in all_entities, "config directory should be found"
+    assert 'src' in all_entities, "src directory should be found"
+    assert 'models' in all_entities, "models directory should be found"
+    assert 'controllers' in all_entities, "controllers directory should be found"
+    assert 'user' in all_entities, "user file should be found"
+    assert 'article' in all_entities, "article file should be found"
 
 
 def test_parallel_docs_entities():
