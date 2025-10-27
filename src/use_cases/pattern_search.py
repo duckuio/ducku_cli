@@ -35,7 +35,7 @@ files_patterns = [
 ]
 
 string_patterns = [
-    SearchPattern("TCP port", r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w-])', ["is_port_context"]), # TCP ports (0-65535) with port context check
+    SearchPattern("Port Number", r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w-])', ["is_port_context"]), # TCP ports (0-65535) with port context check
     # env var is just any capital case word, but must be in the right context and contain "_". Without underscore it would be too many false positives
     SearchPattern("Environment variable", r'(?<!\w)(?:[A-Z][A-Z0-9_]{2,63})\b', ["is_env_var_context", "contains_"]), # Environment variables (minimum 3 chars to avoid false positives)
 ]
@@ -62,6 +62,7 @@ class PatternSearch(BaseUseCase):
                     # Skip binary files or files with non-text content
                     content = dp.read()
                     if '\0' in content or sum(1 for c in content[:1000] if ord(c) < 32 and c not in '\n\r\t') > 30:
+                        print("WAS SKIPPED")
                         continue
                     
                     matches = pattern.find_all(dp)

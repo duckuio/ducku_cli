@@ -97,11 +97,16 @@ Also feel free to utilize [`Dockerfile`](Dockerfile) to build and use your own i
 ### Command Line Interface
 
 #### Analyze a Single Project
-```bash
-# Interactive mode
-ducku
 
-# Or specify project path
+Interactive mode
+
+```bash
+ducku
+```
+
+Use `PROJECT_PATH` environment variable to define the project root
+
+```bash
 PROJECT_PATH=/path/to/your/project ducku
 ```
 
@@ -132,7 +137,7 @@ disabled_pattern_search_patterns:
   - "Unix path"
   - "Windows path"
   - "Filename"
-  - "TCP port"
+  - "Port Number"
   - "Environment variable"
 ```
 

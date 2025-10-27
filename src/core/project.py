@@ -79,9 +79,10 @@ class Project:
     def contains_string(self, artefact: str) -> bool:
         for walk_item in self.walk_items:
             for file in walk_item.files:
+                if file in self.doc_paths:
+                    continue
                 content = file.read_text()
                 if artefact in content:
-                    #print("Found in file", file)
                     return True
         return False
 
@@ -128,6 +129,8 @@ class Project:
     def contains_file(self, artifact: str) -> bool:
         for walk_item in self.walk_items:
             for file in walk_item.files:
+                if file in self.doc_paths:
+                    continue
                 if file.name == artifact:
                     return True
         return False

@@ -62,7 +62,7 @@ def test_ports():
     false_positive3 = DocString("The portkey service is on 127.0.0.80", "test")
     false_positive4 = DocString("https://img.shields.io/pypi/l/dnsdiag.svg?maxAge=8600", "test")
 
-    pat = string_patterns[0]
+    pat = next(p for p in string_patterns if p.name == "Port Number")
 
     assert pat.is_in(with_port1)
     assert pat.is_in(with_port2)
@@ -75,12 +75,14 @@ def test_ports():
 
 def test_envs():
     with_env = DocString("Lorem Ipsum uses environment variable 'APP_PATH'", "test")
+    with_env2 = DocString("Use `PROJECT_PATH` environment variable to define the project root", "test")
     no_env = DocString("Lorem Ipsum Lorem Ipsum", "test")
     false_positive = DocString("Lorem Ipsum Lorem IPSUM Lorem", "test")
-    
-    pat = string_patterns[1]
+
+    pat = next(p for p in string_patterns if p.name == "Environment variable")
 
     assert pat.is_in(with_env)
+    assert pat.is_in(with_env2)
     assert not pat.is_in(no_env)
     assert not pat.is_in(false_positive)
 
