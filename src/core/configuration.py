@@ -11,21 +11,21 @@ class Configuration:
     documentation_paths: Optional[List[str]] = field(default_factory=list)
     disabled_use_cases: Optional[List[str]] = field(default_factory=list)
     disabled_pattern_search_patterns: Optional[List[str]] = field(default_factory=list)
-	fail_on_issues: Optional[bool] = False
+    fail_on_issues: Optional[bool] = False
 
 def load_schema():
-	with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
-		return yaml.safe_load(f)
+    with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 def parse_ducku_yaml(project_root):
-	config_path = os.path.join(project_root, ".ducku.yaml")
-	if not os.path.exists(config_path):
-		return Configuration()
-	with open(config_path, "r", encoding="utf-8") as f:
-		config = yaml.safe_load(f)
-	schema = load_schema()
-	try:
-		jsonschema.validate(instance=config, schema=schema)
-	except jsonschema.ValidationError as e:
-		raise ValueError(f"Invalid .ducku.yaml: {e.message}") from e
-	return Configuration(**config)
+    config_path = os.path.join(project_root, ".ducku.yaml")
+    if not os.path.exists(config_path):
+        return Configuration()
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    schema = load_schema()
+    try:
+        jsonschema.validate(instance=config, schema=schema)
+    except jsonschema.ValidationError as e:
+        raise ValueError(f"Invalid .ducku.yaml: {e.message}") from e
+    return Configuration(**config)
