@@ -83,7 +83,7 @@ class Project:
                 if file in self.doc_paths:
                     continue
                 content = file.read_text()
-                if artefact in content:
+                if artefact_match in content:
                     return True
         return False
 
