@@ -18,5 +18,7 @@ properties:
     items:
       type: string
     description: "Disabled patterns for the use case pattern_search"
+  fail_on_issues:
+    type: boolean
 required: []
 additionalProperties: false

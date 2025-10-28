@@ -11,6 +11,7 @@ class Configuration:
     documentation_paths: Optional[List[str]] = field(default_factory=list)
     disabled_use_cases: Optional[List[str]] = field(default_factory=list)
     disabled_pattern_search_patterns: Optional[List[str]] = field(default_factory=list)
+	fail_on_issues: Optional[bool] = False
 
 def load_schema():
 	with open(SCHEMA_PATH, "r", encoding="utf-8") as f:

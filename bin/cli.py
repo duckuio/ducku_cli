@@ -29,16 +29,21 @@ def start(base):
             (UnusedModules, "Unused Modules Detection")
         ]
         p = Project(base)
+        found = False
         for uc_class, title in use_cases_to_run:
             uci = uc_class(p)
             if p.config.disabled_use_cases and uci.name in p.config.disabled_use_cases:
                 continue
             r = uci.report()
+            if r != "":
+                found = True
             print(colorized_title(title))
             if r and r.strip():  # Print the actual results
                 print(r)
             else:  # No issues found
                 print(f"{Colors.BRIGHT_GREEN}✅ No issues found{Colors.RESET}\n")
+        if p.config.fail_on_issues and found:
+            exit(1)
     except Exception as e:
         print(e)
         traceback.print_exc()

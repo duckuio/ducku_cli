@@ -141,7 +141,36 @@ disabled_pattern_search_patterns:
   - "Environment variable"
 ```
 
-## 🤝 Contributing
+## � Pre-commit Hook
+
+You can integrate Ducku into your Git workflow using pre-commit hooks to automatically check documentation quality before commits.
+
+1. **Install pre-commit**:
+```bash
+pip install pre-commit
+```
+
+2. **Create `.pre-commit-config.yaml`** in your repository root:
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: ducku
+        name: Documentation Quality Check
+        entry: ducku
+        language: system
+        pass_filenames: false
+        always_run: true
+        env:
+          - PROJECT_PATH=.
+```
+
+3. **Install the hook**:
+```bash
+pre-commit install
+```
+
+## �🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
