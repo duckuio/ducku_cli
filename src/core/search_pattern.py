@@ -2,13 +2,20 @@ import re
 from src.core.documentation import DocPart
 
 class SearchPattern:
-    def __init__(self, name: str, regexp: str, postfilters: list[str] = []):
+    def __init__(self, name: str, regexp: str, project_handler, postfilters: list[str] = []):
+        """
+        Args:
+            name (str): The name of the pattern.
+            regexp (str): Regular expression pattern to compile.
+            project_handler: Project class member function to handle the pattern
+            postfilters (list[str], optional): List of postfilter functions to apply. They are SearchPattern class members. 
+        """
         self.postfilters = postfilters
         self.regexp = re.compile(regexp)
         self.name = name
+        self.project_handler = project_handler
 
     def _extract_line_context(self, text: str, match_start: int, match_end: int) -> str:
-        """Extract the entire line containing the match"""
         # Find the start of the line
         line_start = text.rfind('\n', 0, match_start)
         if line_start == -1:
@@ -24,7 +31,6 @@ class SearchPattern:
         return text[line_start:line_end]
 
     def contains_(self, m: re.Match, context: str) -> bool:
-        """Check if the match contains an underscore"""
         return '_' in m.group(0)
 
     # Postifilters should return true to keep the match, False to discard it
@@ -39,7 +45,7 @@ class SearchPattern:
         return None
         
     def find_all(self, ds: DocPart) -> list[re.Match]:
-        """Find all matches in the document part that pass the postfilters"""
+        """Find all matches in the document part that also pass the postfilters"""
         matches = []
         text = ds.read()
         for m in self.regexp.finditer(text):

@@ -1,9 +1,37 @@
-from zipfile import Path
-from src.use_cases.pattern_search import files_patterns, string_patterns, path_patterns
+from pathlib import Path
+from src.use_cases.pattern_search import all_patterns, PatternSearch
 from src.core.documentation import DocString, Source
 from src.core.project import Project
 
 def test_filenames():
+    # Standalone filename (should match)
+    standalone = DocString("Lorem Ipsum index.html Ipsum Lorem", "test")
+    
+    # filename in relative path (should still match the filename part)
+    relpath = DocString("Lorem Ipsum ./abc/index.html Ipsum Lorem", "test")
+    
+    # filename in absolute path (should still match the filename part)
+    abs_path = DocString("Lorem Ipsum /tmp/abc/index.html Ipsum Lorem", "test")
+    
+    # no filenames
+    nothing = DocString("Lorem Ipsum Lorem Ipsum Lorem Ipsum", "test")
+    
+    # if filename is part of URL - should be filtered out
+    in_url1 = DocString("Lorem Ipsum https://google.com/index.html Ipsum Lorem", "test")
+    in_url2 = DocString("<li><a href=\"https://github.com/abc/discord.py\">Discord.py</a></li>", "test")
+
+    # Find the filename pattern from all_patterns
+    filename_pattern = next(p for p in all_patterns if p.name == "Filename")
+
+    assert filename_pattern.is_in(standalone)  # standalone filename should match
+    assert filename_pattern.is_in(relpath)  # filename in path should still match (just the filename part)
+    assert filename_pattern.is_in(abs_path)  # filename in path should still match (just the filename part)
+    assert not filename_pattern.is_in(nothing)  # no filenames should not match
+    assert not filename_pattern.is_in(in_url1)  # URL context should be filtered out
+    assert not filename_pattern.is_in(in_url2)  # URL context should be filtered out
+
+
+def test_unix_paths():
     # real relative path
     relpath = DocString("""
 Lorem Ipsum ./abc/index.html Ipsum Lorem
@@ -18,17 +46,14 @@ Lorem Ipsum /tmp/abc/index.html Ipsum Lorem
     in_url1 = DocString("""
 Lorem Ipsum https://google.com/index.html Ipsum Lorem
 """, "test")
-    in_url2 = DocString("<li><a href=\"https://github.com/abc/discord.py\">Discord.py</a></li>", "test")
 
-    # Use the Unix path pattern instead of the commented-out filename pattern
-    fn_pat = files_patterns[0]  # Unix path pattern
+    # Find the Unix path pattern from all_patterns
+    unix_path_pattern = next(p for p in all_patterns if p.name == "Unix path")
 
-    assert not fn_pat.is_in(in_url1)
-    assert fn_pat.is_in(relpath)  # relative path should match
-    assert fn_pat.is_in(abs_path)  # absolute path should match
-    assert not fn_pat.is_in(nothing)
-    # Note: basefilename (just "index.html") won't match Unix path pattern as it requires path separators
-    assert not fn_pat.is_in(in_url2)
+    assert not unix_path_pattern.is_in(in_url1)
+    assert unix_path_pattern.is_in(relpath)  # relative path should match
+    assert unix_path_pattern.is_in(abs_path)  # absolute path should match
+    assert not unix_path_pattern.is_in(nothing)
 
 
 def test_not_mocked_filter():
@@ -39,8 +64,8 @@ def test_not_mocked_filter():
     # Test paths that should be kept
     normal_path = DocString("Lorem Ipsum /tmp/me/abc/file.txt Lorem Ipsum", "test")
     
-    # The Unix path pattern uses not_mocked filter
-    unix_path_pattern = path_patterns[0]
+    # Find the Unix path pattern from all_patterns
+    unix_path_pattern = next(p for p in all_patterns if p.name == "Unix path")
     
     # Should filter out /path/to/file.txt
     assert not unix_path_pattern.is_in(mocked_path)
@@ -62,16 +87,17 @@ def test_ports():
     false_positive3 = DocString("The portkey service is on 127.0.0.80", "test")
     false_positive4 = DocString("https://img.shields.io/pypi/l/dnsdiag.svg?maxAge=8600", "test")
 
-    pat = next(p for p in string_patterns if p.name == "Port Number")
+    # Find the port pattern from all_patterns
+    port_pattern = next(p for p in all_patterns if p.name == "Port Number")
 
-    assert pat.is_in(with_port1)
-    assert pat.is_in(with_port2)
-    assert pat.is_in(with_port3)
-    assert not pat.is_in(no_ports)
-    assert not pat.is_in(false_positive1)
-    assert not pat.is_in(false_positive2)
-    assert not pat.is_in(false_positive3)
-    assert not pat.is_in(false_positive4)
+    assert port_pattern.is_in(with_port1)
+    assert port_pattern.is_in(with_port2)
+    assert port_pattern.is_in(with_port3)
+    assert not port_pattern.is_in(no_ports)
+    assert not port_pattern.is_in(false_positive1)
+    assert not port_pattern.is_in(false_positive2)
+    assert not port_pattern.is_in(false_positive3)
+    assert not port_pattern.is_in(false_positive4)
 
 def test_envs():
     with_env = DocString("Lorem Ipsum uses environment variable 'APP_PATH'", "test")
@@ -79,11 +105,39 @@ def test_envs():
     no_env = DocString("Lorem Ipsum Lorem Ipsum", "test")
     false_positive = DocString("Lorem Ipsum Lorem IPSUM Lorem", "test")
 
-    pat = next(p for p in string_patterns if p.name == "Environment variable")
+    # Find the environment variable pattern from all_patterns
+    env_pattern = next(p for p in all_patterns if p.name == "Environment variable")
 
-    assert pat.is_in(with_env)
-    assert pat.is_in(with_env2)
-    assert not pat.is_in(no_env)
-    assert not pat.is_in(false_positive)
+    assert env_pattern.is_in(with_env)
+    assert env_pattern.is_in(with_env2)
+    assert not env_pattern.is_in(no_env)
+    assert not env_pattern.is_in(false_positive)
 
-# @TODO unit tests for contain path and string
+def test_strings_in_project():
+    # README contains an environment variable which is not used in the project
+    path = Path(__file__).parent / ".." / "mocks" / "projects" / "patterns"
+    p = Project(path)
+    uc = PatternSearch(p)
+    report = uc.report()
+    print(report)
+    assert report != ""
+    assert "Environment variable" in report
+
+def test_files_in_project():
+    # README contains filename which is not used in the project
+    path = Path(__file__).parent / ".." / "mocks" / "projects" / "patterns"
+    p = Project(path)
+    uc = PatternSearch(p)
+    report = uc.report()
+    print(report)
+    assert report != ""
+    assert "Filename" in report
+
+def test_filepaths_in_project():
+    # README contains path which is not used in the project
+    path = Path(__file__).parent / ".." / "mocks" / "projects" / "patterns"
+    p = Project(path)
+    uc = PatternSearch(p)
+    report = uc.report()
+    assert report != ""
+    assert "path" in report

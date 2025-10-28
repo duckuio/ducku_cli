@@ -1,6 +1,7 @@
 from src.core.base_usecase import BaseUseCase
 from src.core.documentation import Source
 from src.core.project import Project
+from dataclasses import dataclass
 from src.core.search_pattern import SearchPattern
 
 exts = (
@@ -10,41 +11,52 @@ exts = (
     r'orc|avro|proto|thrift|graphql|gql|md|markdown|adoc|rst|log|txt)'
 )
 
-path_patterns = [
+all_patterns = [
     SearchPattern(
         "Unix path",
         rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
         rf'(?:\.{{0,2}}/|~/|/(?!/))(?![^\s\'"\)\]>\{{\}}<>]*//)'
         rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b',
+        "contains_path",
         ["not_mocked"]
     ),
     SearchPattern(
         "Windows path",
         rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
         rf'(?:[A-Za-z]:\\|\\\\)'
-        rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b'
-    )
-]
-
-files_patterns = [
-        SearchPattern(
+        rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b',
+        "contains_path",
+        ["not_mocked"]
+    ),
+    SearchPattern(
         "Filename",
         rf'(?<!\w)(?<!://)[A-Za-z0-9._-]+\.{exts}\b',
-        ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path"],
+        "contains_file",
+        ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path"]
+    ),
+    SearchPattern(
+        "Port Number", # TCP ports (0-65535) with port context check
+        r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w-])',
+        "contains_string",
+        ["is_port_context"]
+    ),
+    SearchPattern(
+        "Environment variable", # env var is just any capital case word, but must be in the right context and contain "_". Without underscore it would be too many false positives
+        r'(?<!\w)(?:[A-Z][A-Z0-9_]{2,63})\b',
+        "contains_string",
+        ["is_env_var_context", "contains_"]
     ),
 ]
 
-string_patterns = [
-    SearchPattern("Port Number", r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w-])', ["is_port_context"]), # TCP ports (0-65535) with port context check
-    # env var is just any capital case word, but must be in the right context and contain "_". Without underscore it would be too many false positives
-    SearchPattern("Environment variable", r'(?<!\w)(?:[A-Z][A-Z0-9_]{2,63})\b', ["is_env_var_context", "contains_"]), # Environment variables (minimum 3 chars to avoid false positives)
-]
+def get_patterns_yaml_list() -> str:
+    return "\n".join([f"  - {p.name}" for p in all_patterns])
 
+
+@dataclass
 class Artifact:
-    def __init__(self, pattern: SearchPattern, match: str, source: Source):
-        self.pattern: SearchPattern = pattern
-        self.match: str = match # pattern match
-        self.source: Source = source
+    pattern: SearchPattern
+    match: str  # pattern match
+    source: Source
         
 class PatternSearch(BaseUseCase):
 
@@ -87,20 +99,12 @@ class PatternSearch(BaseUseCase):
     def report(self):
         result = ""
 
-        artifacts = self.collect_docs_artifacts(string_patterns)
+        artifacts = self.collect_docs_artifacts(all_patterns)
+        # handing everything that was found in docs
         for artifact in artifacts:
-            if not self.project.contains_string(artifact.match):
-                result += f"String '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
+            handler = getattr(self.project, artifact.pattern.project_handler)
 
-        artifacts = self.collect_docs_artifacts(path_patterns)
-        for artifact in artifacts:
-            found = self.project.contains_path(artifact.match, artifact.source)
-            if not found:
-                result += f"Path '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
+            if not handler(artifact):
+                result += f"{artifact.pattern.name} '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
 
-        artifacts = self.collect_docs_artifacts(files_patterns)
-        for artifact in artifacts:
-            found = self.project.contains_file(artifact.match)
-            if not found:
-                result += f"File '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
         return result

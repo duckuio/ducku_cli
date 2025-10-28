@@ -76,7 +76,8 @@ class Project:
         # _files parameter is kept for backward compatibility but not used
         return Path(root).name in folders_to_skip
 
-    def contains_string(self, artefact: str) -> bool:
+    def contains_string(self, artefact) -> bool:
+        artefact_match = artefact.match
         for walk_item in self.walk_items:
             for file in walk_item.files:
                 if file in self.doc_paths:
@@ -86,7 +87,9 @@ class Project:
                     return True
         return False
 
-    def contains_path(self, artifact: str, source: Source) -> bool:
+    def contains_path(self, artifact) -> bool:
+        artifact_match = artifact.match
+        source = artifact.source
         # sometimes files appear as examples
         MOCKS_TO_SKIP = [
             "hello", "my", "input", "output", "data", "file", "files", "path", "xxx", "yyy", "zzz", "example", "sample", "test", "demo", "log"
@@ -99,10 +102,10 @@ class Project:
             "C:/", "D:/", "E:/", "F:/", "G:/", "H:/", "I:/", "J:/", "K:/", "L:/", "M:/",
             "N:/", "O:/", "P:/", "Q:/", "R:/", "S:/", "T:/", "U:/", "V:/", "W:/", "X:/", "Y:/", "Z:/"
         ]
-        if any(artifact.startswith(path) for path in os_root_paths):
+        if any(artifact_match.startswith(path) for path in os_root_paths):
             return False
             
-        cand = Path(artifact.lstrip("/"))  # normalize absolute-like paths
+        cand = Path(artifact_match.lstrip("/"))  # normalize absolute-like paths
         if any(excl in str(cand).lower() for excl in MOCKS_TO_SKIP):
             return False
         if len(cand.parts) == 1:  # single/relative file
@@ -126,12 +129,13 @@ class Project:
             return ex
     
     # try to find anywhere in the project
-    def contains_file(self, artifact: str) -> bool:
+    def contains_file(self, artifact) -> bool:
+        artifact_match = artifact.match
         for walk_item in self.walk_items:
             for file in walk_item.files:
                 if file in self.doc_paths:
                     continue
-                if file.name == artifact:
+                if file.name == artifact_match:
                     return True
         return False
 
