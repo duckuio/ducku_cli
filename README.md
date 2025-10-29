@@ -14,7 +14,7 @@ Ducku is a static documentation quality tool
 ### 1. Pattern Search 🔍
 
 Often documentation contains some outdated artifacts, like non-existing scripts and ports which have been changed.
-Docku staticly detects certain patterns in documentation and checks their existance in the code.
+Ducku staticly detects certain patterns in documentation and checks their existance in the code.
 Currently it supports:
 
 - Filenames
