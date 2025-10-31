@@ -55,7 +55,7 @@ Languages support:
 - PHP
 
 
-## Installation 📦
+## 📦 Installation
 
 ### Install from PyPI (Recommended)
 
@@ -92,7 +92,7 @@ Example for GitHub Actions:
 
 Also feel free to utilize [`Dockerfile`](Dockerfile) to build and use your own image.
 
-## Usage 🚀
+## 🚀 Usage
 
 ### Command Line Interface
 
@@ -141,7 +141,7 @@ disabled_pattern_search_patterns:
   - "Environment variable"
 ```
 
-## � Pre-commit Hook
+## ✅ Pre-commit Hook
 
 You can integrate Ducku into your Git workflow using pre-commit hooks to automatically check documentation quality before commits.
 
@@ -170,7 +170,7 @@ repos:
 pre-commit install
 ```
 
-## �🤝 Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
