@@ -113,6 +113,24 @@ def test_envs():
     assert not env_pattern.is_in(no_env)
     assert not env_pattern.is_in(false_positive)
 
+def test_routes():
+    with_route = DocString("Lorem Ipsum defines a route '/api/v1/resource'", "test")
+    with_route2 = DocString("Use the `GET /api/v1/resource` endpoint to retrieve data", "test")
+    with_route3 = DocString("Use the `curl -X http://localhost/api/v1/resource` endpoint to retrieve data", "test")
+    false_positive1 = DocString("Here is just filename path /tmp/abc/123.txt", "test")
+    false_positive2 = DocString("No context /abc/def here", "test")
+    false_positive3 = DocString("Use the `curl -X http://googl.com/api/v1/resource` endpoint to retrieve data", "test")
+
+    # Find the route pattern from all_patterns
+    route_pattern = next(p for p in all_patterns if p.name == "HTTP Route")
+
+    assert route_pattern.is_in(with_route)
+    assert route_pattern.is_in(with_route2)
+    assert route_pattern.is_in(with_route3)
+    assert not route_pattern.is_in(false_positive1)
+    assert not route_pattern.is_in(false_positive2)
+    assert not route_pattern.is_in(false_positive3)
+
 def test_strings_in_project():
     # README contains an environment variable which is not used in the project
     path = Path(__file__).parent / ".." / "mocks" / "projects" / "patterns"

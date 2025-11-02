@@ -21,6 +21,7 @@ Currently it supports:
 - File paths (both Unix and Windows)
 - Environment variables
 - Ports
+- HTTP Routes
 
 
 ### 2. Partial Match Detection 🎯
@@ -139,6 +140,7 @@ disabled_pattern_search_patterns:
   - "Filename"
   - "Port Number"
   - "Environment variable"
+  - "HTTP Routes"
 ```
 
 ## ✅ Pre-commit Hook

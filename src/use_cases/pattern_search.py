@@ -46,6 +46,20 @@ all_patterns = [
         "contains_string",
         ["is_env_var_context", "contains_"]
     ),
+    SearchPattern(
+        "HTTP Route",
+        r'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
+        r'(?:'
+        r'(?:https?://)?localhost(?::\d+)?/(?![/*])'  # localhost URLs with optional protocol and port
+        r'|'
+        r'/(?![/*])'  # relative paths starting with /
+        r')'
+        r'(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/-]|{{|}}|<|>)+'
+        r'(?:\?(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?'
+        r'(?:#(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?',
+        "contains_string",
+        ["is_route_context"]
+    ),
 ]
 
 def get_patterns_yaml_list() -> str:

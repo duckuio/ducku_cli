@@ -71,6 +71,11 @@ class SearchPattern:
         txt = m.group(0).lower()
         return not any(ex in txt for ex in exclusions)
     
+
+    def is_route_context(self, m: re.Match, context: str) -> bool:
+        route_indicators = ['route', 'endpoint', 'url', 'request', 'get', 'post', 'put', 'delete', 'patch', 'curl']
+        return self.are_indicators_in_context(route_indicators, m, context)
+
     def not_mocked(self, m: re.Match, context: str) -> bool:
         common_mocked_parts = ["path", "to"]
         txt = m.group(0)
