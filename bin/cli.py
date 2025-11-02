@@ -1,5 +1,10 @@
 import os
 import traceback
+from src.use_cases.partial_lists import PartialMatch 
+from src.use_cases.pattern_search import PatternSearch
+from src.use_cases.unused_modules import UnusedModules
+from src.use_cases.spellcheck import Misspellings
+from src.core.project import Project
 
 # ANSI color codes for terminal output
 class Colors:
@@ -14,11 +19,6 @@ def colorized_title(text, color=Colors.BRIGHT_CYAN):
     return f"\n{Colors.BOLD}{color}🔍 {text}{Colors.RESET}\n" + "=" * (len(text) + 3) + "\n"
 
 def start(base):
-    from src.use_cases.partial_lists import PartialMatch 
-    from src.use_cases.pattern_search import PatternSearch
-    from src.use_cases.unused_modules import UnusedModules
-    from src.core.project import Project
-
     if not os.path.isdir(base):
         print(f"Path {base} doesn't exist")
         exit()
@@ -26,7 +26,8 @@ def start(base):
         use_cases_to_run = [
             (PartialMatch, "Partial Match Detection"),
             (PatternSearch, "Pattern Search Analysis"), 
-            (UnusedModules, "Unused Modules Detection")
+            (UnusedModules, "Unused Modules Detection"),
+            (Misspellings, "Misspellings Detection"),
         ]
         p = Project(base)
         found = False

@@ -23,8 +23,11 @@ Currently it supports:
 - Ports
 - HTTP Routes
 
+### 2. Spell-Chcker ✏️
 
-### 2. Partial Match Detection 🎯
+Checks all defined and detected documentation for spelling errors.
+
+### 3. Partial Match Detection 🎯
 
 Second frequent issue in documentation is partial lists. For example in this project there can be implemented a new use case, but it can be forgotten to document here.
 So Ducku corresponds lists in documentation as
@@ -35,7 +38,7 @@ with potential lists in code as
 - files/folders in one folder
 - JSON/YAML keys/values at the same level
 
-### 3. Unused Module Detection (beta)
+### 4. Unused Module Detection (beta)
 
 This use case helps you to identify modules which are not imported from anywhere. 
 That means one of:
@@ -127,6 +130,7 @@ disabled_use_cases:
   - unused_modules
   - pattern_search
   - partial_lists
+  - spellcheck
 
 # Additional documentation paths
 documentation_paths:
@@ -204,3 +208,5 @@ This project is licensed under the Ducku Source Available License (DSAL) - see t
 - 📖 Source code must remain available under the same license terms
 
 For detailed terms and conditions, please review the full [LICENSE](LICENSE) file.
+
+Here ist the typeos: missspeling. Check it out

@@ -76,6 +76,7 @@ class PatternSearch(BaseUseCase):
 
     def __init__(self, project: Project):
         super().__init__(project)
+        self.name = "pattern_search"
 
     def collect_docs_artifacts(self, patterns: list[SearchPattern]) -> list[Artifact]:
         artefacts = []

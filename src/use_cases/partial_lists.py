@@ -8,6 +8,7 @@ class PartialMatch(BaseUseCase):
 
     def __init__(self, project: Project):
         super().__init__(project)
+        self.name = "partial_lists"
 
     def find_partials(self, ent1: List[EntitiesContainer], ent2: List[EntitiesContainer]):
         report = ""
