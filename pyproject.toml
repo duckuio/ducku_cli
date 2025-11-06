@@ -1,6 +1,6 @@
 [project]
 name = "ducku"
-version = "0.1.0"
+version = "0.1.1"
 description = "Documentation analysis and code quality tool for multi-language projects"
 readme = "README.md"
 license = {text = "Ducku Source Available License (DSAL)"}
