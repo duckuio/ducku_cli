@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Utilities",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "anytree>=2.13.0",
     "codespell>=2.4.1",
