@@ -2,7 +2,7 @@
 
 Ducku is a static documentation quality tool
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-DSAL-orange.svg)](LICENSE)
 
 [ This documentation was checked by Ducku ]
