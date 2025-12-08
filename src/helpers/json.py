@@ -21,13 +21,19 @@ def is_corrupted(value):
         value = str(value)
     return "\n" in value or len(value) > 50
 
+def to_filter_key(key):
+    filter_keys = ["if", "when", "id", "uuid", "name", "type", "version", "lang", "language", "title", "description", "date", "created_at", "updated_at"]
+    if not isinstance(key, str):
+        key = str(key)
+    return key.lower() in filter_keys or len(key) > 30
+
 def collect_key_values(data, parallel_entities, parent):
     from src.core.entity import Entity, EntitiesContainer  # Import here to avoid circular dependency
     key_items = EntitiesContainer(parent, "json_keys")
     value_items = EntitiesContainer(parent, "json_values")
     if isinstance(data, dict):
         for key, value in data.items():
-            if not is_corrupted(key):
+            if not is_corrupted(key) and not to_filter_key(key):
                 key_items.append(Entity(str(key)))
             if isinstance(value, (str, int, float, bool)):
                 if not is_corrupted(value):

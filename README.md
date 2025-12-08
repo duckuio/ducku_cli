@@ -14,7 +14,7 @@ Ducku is a static documentation quality tool
 ### 1. Pattern Search 🔍
 
 Often documentation contains some outdated artifacts, like non-existing scripts and ports which have been changed.
-Ducku staticly detects certain patterns in documentation and checks their existance in the code.
+Ducku statically detects certain patterns in documentation and checks their existence in the code.
 Currently it supports:
 
 - Filenames
@@ -23,13 +23,14 @@ Currently it supports:
 - Ports
 - HTTP Routes
 
-### 2. Spell-Chcker ✏️
+### 2. Spell-Checker ✏️
 
 Checks all defined and detected documentation for spelling errors.
 
 ### 3. Partial Match Detection 🎯
 
 Second frequent issue in documentation is partial lists. For example in this project there can be implemented a new use case, but it can be forgotten to document here.
+
 So Ducku corresponds lists in documentation as
 - headers
 - bullet points
@@ -37,6 +38,11 @@ So Ducku corresponds lists in documentation as
 with potential lists in code as
 - files/folders in one folder
 - JSON/YAML keys/values at the same level
+- module-level functions
+- classes
+- dictionary keys, values, and list elements
+
+*Terms here are for Python, but similar structures are supported for other languages as well.
 
 ### 4. Unused Module Detection (beta)
 
@@ -48,16 +54,16 @@ That means one of:
 In the first case it should be documented, since it's direct instructions of using the system
 In the second case likely deleted.
 
-Languages support:
+--------------
+
+For all the usecases are following programming languages are supported:
 
 - Python
-- JavaScript/TypeScript
+- JavaScript
+- TypeScript
 - Java
-- C#
 - Go
 - Ruby
-- PHP
-
 
 ## 📦 Installation
 
@@ -136,15 +142,31 @@ disabled_use_cases:
 documentation_paths:
   - /tmp/other_docs
 
-# Custom file patterns to skip
-disabled_pattern_search_patterns:
-# possible values
-  - "Unix path"
-  - "Windows path"
-  - "Filename"
-  - "Port Number"
-  - "Environment variable"
-  - "HTTP Routes"
+# Paths to exclude from code analysis
+code_paths_to_ignore:
+  - vendor/
+  - node_modules/
+
+# This paths won't be collected as documentation
+documentation_paths_to_ignore:
+ - path/to/docs_to_ignore
+# usecase specific options
+use_case_options:
+  unused_modules:
+    enabled: false
+  #...
+  pattern_search:
+    # Custom file patterns to skip
+    disabled_patterns:
+    # possible values
+      - "Unix path"
+      - "Windows path"
+      - "Filename"
+      - "Port Number"
+      - "Environment variable"
+      - "HTTP Routes"
+  # If true quits with code 1 after printing all the reports. Default: false
+fail_on_issues: false
 ```
 
 ## ✅ Pre-commit Hook
@@ -208,5 +230,3 @@ This project is licensed under the Ducku Source Available License (DSAL) - see t
 - 📖 Source code must remain available under the same license terms
 
 For detailed terms and conditions, please review the full [LICENSE](LICENSE) file.
-
-Here ist the typeos: missspeling. Check it out

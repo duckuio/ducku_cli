@@ -32,11 +32,11 @@ all_patterns = [
         "Filename",
         rf'(?<!\w)(?<!://)[A-Za-z0-9._-]+\.{exts}\b',
         "contains_file",
-        ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path"]
+        ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path", "file_correct_context"]
     ),
     SearchPattern(
         "Port Number", # TCP ports (0-65535) with port context check
-        r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w-])',
+        r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w,_-])',
         "contains_string",
         ["is_port_context"]
     ),
@@ -82,7 +82,7 @@ class PatternSearch(BaseUseCase):
         artefacts = []
         cache = {}
         for pattern in patterns:
-            if self.project.config.disabled_pattern_search_patterns and pattern.name in self.project.config.disabled_pattern_search_patterns:
+            if self.project.config.use_case_options.pattern_search.disabled_patterns and pattern.name in self.project.config.use_case_options.pattern_search.disabled_patterns:
                 continue
             for dp in self.project.documentation.doc_parts:
                 try:
@@ -118,8 +118,7 @@ class PatternSearch(BaseUseCase):
         # handing everything that was found in docs
         for artifact in artifacts:
             handler = getattr(self.project, artifact.pattern.project_handler)
-
-            if not handler(artifact):
+            if not handler(artifact.match, artifact.source):
                 result += f"{artifact.pattern.name} '{artifact.match}' found in {artifact.source.get_source_identifier()}, but nowhere in the project. Probably outdated artifact\n"
 
         return result
