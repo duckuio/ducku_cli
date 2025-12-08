@@ -34,6 +34,7 @@ Second frequent issue in documentation is partial lists. For example in this pro
 So Ducku corresponds lists in documentation as
 - headers
 - bullet points
+- markdown code snippets
 
 with potential lists in code as
 - files/folders in one folder
