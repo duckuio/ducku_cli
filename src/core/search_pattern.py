@@ -71,6 +71,10 @@ class SearchPattern:
         txt = m.group(0).lower()
         return not any(ex in txt for ex in exclusions)
     
+    def file_correct_context(self, m: re.Match, context: str) -> bool:
+        indicators = ['create', 'save']
+        return not self.are_indicators_in_context(indicators, m, context)
+    
 
     def is_route_context(self, m: re.Match, context: str) -> bool:
         route_indicators = ['route', 'endpoint', 'url', 'request', 'get', 'post', 'put', 'delete', 'patch', 'curl']
@@ -83,6 +87,7 @@ class SearchPattern:
         parts = txt.split(sep)
         return not any(p in common_mocked_parts for p in parts)
 
+    # indicators is a list of strings to look for in the context in lower case
     def are_indicators_in_context(self, indicators, m, context: str | None = None):
         # Use provided context or extract the full line from the match
         if context is None:

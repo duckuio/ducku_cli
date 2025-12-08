@@ -1,4 +1,4 @@
-from src.core.project import CachedPath
+from src.helpers.file_system import CachedPath
 import os
 
 def test_cached_path():

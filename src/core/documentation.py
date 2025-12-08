@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
-import os
 from anytree import Node
 from markdown_it import MarkdownIt
 from pathlib import Path
+from src.helpers.json import collect_key_values, IgnoreUnknownTagsLoader
+import yaml
+import json
+from src.helpers.file_system import FileSystemFolder
 
 SUPPORTED_FORMATS = [".md", ".markdown", "markdown"]
 
@@ -58,6 +61,24 @@ def _parse_list(tokens, i, parent):
         i += 1
     return i
 
+
+def _parse_code_block(code_content: str, language: str, parent_path: str, parallel_entities):
+    """Parse code blocks and extract structured data like YAML/JSON."""
+    if language in ("yaml", "yml"):
+        try:
+            data = yaml.load(code_content, Loader=IgnoreUnknownTagsLoader)
+            if data:
+                collect_key_values(data, parallel_entities, parent_path + "::code_block_yaml")
+        except (yaml.YAMLError, ValueError, TypeError):
+            pass  # Ignore malformed YAML in code blocks
+    elif language == "json":
+        try:
+            data = json.loads(code_content)
+            if data:
+                collect_key_values(data, parallel_entities, parent_path + "::code_block_json")
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass  # Ignore malformed JSON in code blocks
+
 class Source:
     def __init__(self, doc_type: str, doc_format: str, metadata: dict | None = None):
         self.type = doc_type  # "string" or "file"
@@ -85,6 +106,7 @@ class DocPart(ABC):
         self.source = source
         self.headers = Node("headers_root", kind="headers_root")
         self.lists = Node("lists_root", kind="lists_root")
+        self.code_blocks = []  # List of dicts with language, content, parent_path
 
     @abstractmethod
     def read(self) -> str:
@@ -100,11 +122,62 @@ class DocPart(ABC):
         tokens = md.parse(self.read())
         headings = _collect_headings(tokens)
         _build_headers_tree(headings, self.headers)
+        
+        # Build a map of token positions to their header context
+        current_header_path = []
         i = 0
+        
         while i < len(tokens):
             t = tokens[i]
-            if t.type in ("bullet_list_open", "ordered_list_open"):
-                i = _parse_list(tokens, i, self.lists)
+            
+            # Track current header context
+            if t.type == "heading_open":
+                level = int(t.tag[1])
+                if i + 1 < len(tokens) and tokens[i + 1].type == "inline":
+                    header_text = _inline_text(tokens[i + 1]).strip()
+                    
+                    # Remove headers of same or higher level (lower number)
+                    current_header_path = [h for h in current_header_path if h[0] < level]
+                    current_header_path.append((level, header_text))
+            
+            # Parse code blocks
+            elif t.type == "fence":
+                # Extract language and content
+                language = t.info.strip() if t.info else ""
+                code_content = t.content
+                
+                # Build parent path from current header context
+                parent_path = self.source.get_source_identifier()
+                for level, header_text in current_header_path:
+                    parent_path += f"::h{level}::{header_text}"
+                
+                # Store code block for later processing
+                self.code_blocks.append({
+                    'language': language,
+                    'content': code_content,
+                    'parent_path': parent_path
+                })
+            
+            # Parse lists with header context
+            elif t.type in ("bullet_list_open", "ordered_list_open"):
+                # Create a parent node with header context if we have headers
+                if current_header_path:
+                    # Build a node path with header hierarchy
+                    list_parent = self.lists
+                    for level, header_text in current_header_path:
+                        # Find or create header node in lists tree
+                        header_node = None
+                        for child in list_parent.children:
+                            if child.kind == f"h{level}" and child.name == header_text:
+                                header_node = child
+                                break
+                        if not header_node:
+                            header_node = Node(header_text, parent=list_parent, kind=f"h{level}")
+                        list_parent = header_node
+                    
+                    i = _parse_list(tokens, i, list_parent)
+                else:
+                    i = _parse_list(tokens, i, self.lists)
             i += 1
         return tokens
 
@@ -146,10 +219,11 @@ class DocFile(DocPart):
         return self.read()
 
 class Documentation:
-    def __init__(self, docs_separator: str = "\n\n"):
+    def __init__(self, paths_to_ignore: list[Path] | None = None):
         self.doc_parts: list[DocPart] = []
-        self.docs_separator = docs_separator
+        self.docs_separator = "\n\n"
         self._content: str | None = None
+        self.paths_to_ignore = paths_to_ignore or []
 
     @property
     def content(self) -> str:
@@ -161,12 +235,14 @@ class Documentation:
         self.doc_parts.append(part)
 
     def process_folder(self, full_path: Path):
-        for root, _, files in os.walk(full_path):
-            for filename in files:
-                self.process_file(Path(root) / filename)
+        """Process all files in a folder recursively."""
+        fs_folder = FileSystemFolder(full_path, self.paths_to_ignore)
+        all_files = fs_folder.get_all_files()
+        for file in all_files:
+            self.process_file(file)
 
     def process_file(self, file: Path):
-        if file.suffix.lower() in SUPPORTED_FORMATS:
+        if file.suffix.lower() in SUPPORTED_FORMATS and file.resolve() not in self.paths_to_ignore:
             self.doc_parts.append(DocFile(file))
 
     def process_content(self):
