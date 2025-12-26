@@ -11,56 +11,73 @@ exts = (
     r'orc|avro|proto|thrift|graphql|gql|md|markdown|adoc|rst|log|txt)'
 )
 
+PATTERN_DEFS = [
+    {
+        "name": "Unix path",
+        "pattern": (
+            rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
+            rf'(?:\.{{0,2}}/|~/|/(?!/))(?![^\s\'"\)\]>\{{\}}<>]*//)'
+            rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b'
+        ),
+        "project_handler": "contains_path",
+        "rules": ["not_mocked"],
+    },
+    {
+        "name": "Windows path",
+        "pattern": (
+            rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
+            rf'(?:[A-Za-z]:\\|\\\\)'
+            rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b'
+        ),
+        "project_handler": "contains_path",
+        "rules": ["not_mocked"],
+    },
+    {
+        "name": "Filename",
+        "pattern": rf"(?<!\w)(?<!://)[A-Za-z0-9._-]+\.{exts}\b",
+        "project_handler": "contains_file",
+        "rules": ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path", "file_correct_context"],
+    },
+    {
+        "name": "Port Number",
+        "pattern": r"(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w,_-])",
+        "project_handler": "contains_string",
+        "rules": ["is_port_context"],
+    },
+    {
+        "name": "Environment variable",
+        "pattern": r"(?<!\w)(?:[A-Z][A-Z0-9_]{2,63})\b",
+        "project_handler": "contains_string",
+        "rules": ["is_env_var_context", "contains_"],
+    },
+    {
+        "name": "HTTP Route",
+        "pattern": (
+            r'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
+            r"(?:"
+            r"(?:https?://)?localhost(?::\d+)?/(?![/*])"
+            r"|"
+            r"/(?![/*])"
+            r")"
+            r"(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/-]|{{|}}|<|>)+"
+            r"(?:\?(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?"
+            r"(?:#(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?"
+        ),
+        "project_handler": "contains_string",
+        "rules": ["is_route_context"],
+    },
+]
+
 all_patterns = [
     SearchPattern(
-        "Unix path",
-        rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
-        rf'(?:\.{{0,2}}/|~/|/(?!/))(?![^\s\'"\)\]>\{{\}}<>]*//)'
-        rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b',
-        "contains_path",
-        ["not_mocked"]
-    ),
-    SearchPattern(
-        "Windows path",
-        rf'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
-        rf'(?:[A-Za-z]:\\|\\\\)'
-        rf'[^\s\'"\)\]>\{{\}}<>]+\.{exts}\b',
-        "contains_path",
-        ["not_mocked"]
-    ),
-    SearchPattern(
-        "Filename",
-        rf'(?<!\w)(?<!://)[A-Za-z0-9._-]+\.{exts}\b',
-        "contains_file",
-        ["file_not_in_url", "file_not_in_exclusions", "file_is_not_path", "file_correct_context"]
-    ),
-    SearchPattern(
-        "Port Number", # TCP ports (0-65535) with port context check
-        r'(?:(?<=^)|(?<=[ :]))(?:0|[1-9]\d{0,4})(?![.\w,_-])',
-        "contains_string",
-        ["is_port_context"]
-    ),
-    SearchPattern(
-        "Environment variable", # env var is just any capital case word, but must be in the right context and contain "_". Without underscore it would be too many false positives
-        r'(?<!\w)(?:[A-Z][A-Z0-9_]{2,63})\b',
-        "contains_string",
-        ["is_env_var_context", "contains_"]
-    ),
-    SearchPattern(
-        "HTTP Route",
-        r'(?:(?<=^)|(?<=\s)|(?<=[\(\[\{{"\'`]))'
-        r'(?:'
-        r'(?:https?://)?localhost(?::\d+)?/(?![/*])'  # localhost URLs with optional protocol and port
-        r'|'
-        r'/(?![/*])'  # relative paths starting with /
-        r')'
-        r'(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/-]|{{|}}|<|>)+'
-        r'(?:\?(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?'
-        r'(?:#(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?',
-        "contains_string",
-        ["is_route_context"]
-    ),
+        name=d["name"],
+        regexp=d["pattern"],
+        project_handler=d["project_handler"],
+        postfilters=d["rules"]
+    )
+    for d in PATTERN_DEFS
 ]
+
 
 def get_patterns_yaml_list() -> str:
     return "\n".join([f"  - {p.name}" for p in all_patterns])

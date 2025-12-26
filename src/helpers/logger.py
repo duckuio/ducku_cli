@@ -1,8 +1,11 @@
 import logging
+import os
 
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    # Honor DEBUG env var: DEBUG -> DEBUG level, otherwise WARNING
+    level = logging.DEBUG if os.environ.get("DEBUG") else logging.WARNING
+    logger.setLevel(level)
 
     if not logger.handlers:
         handler = logging.StreamHandler()

@@ -4,15 +4,15 @@ from src.core.documentation import Documentation
 from src.helpers.json import collect_json_keys
 
 class Entity:
-    def __init__(self, name: str, entity_object=None):
-        self.name = name
+    def __init__(self, content: str, entity_object=None):
+        self.content = content
         self.object = entity_object
 
     def __str__(self):
-        return self.name
+        return self.content
 
     def __repr__(self):
-        return self.name
+        return self.content
 
 class EntitiesContainer:
     def __init__(self, parent: str, type: str):
@@ -31,6 +31,9 @@ def recursive_collect_doc_entities(children, parallel_entities: List[EntitiesCon
             if n.kind == "__bullet_list":
                 recursive_collect_doc_entities(n.children, parallel_entities, parent_type + "::bullet_list")
                 continue # __bullet_list is just container
+            if n.kind == "ordered_list":
+                recursive_collect_doc_entities(n.children, parallel_entities, parent_type + "::ordered_list")
+                continue # ordered_list is just container
             if n.children:
                 # Build namespace with header name for better context
                 if n.kind.startswith("h"):  # Header nodes (h1, h2, h3, etc.)
@@ -38,7 +41,9 @@ def recursive_collect_doc_entities(children, parallel_entities: List[EntitiesCon
                 else:
                     child_parent_type = parent_type + "::" + n.kind
                 recursive_collect_doc_entities(n.children, parallel_entities, child_parent_type)
-            if len(n.name) > 20: # skip long names. It's not entities anymore, it's sentences
+            if len(n.name) > 50: # skip very long names. It's not entities anymore, it's sentences
+                continue
+            if not n.name: # skip empty names (container nodes)
                 continue
             ls.append(Entity(n.name, parent_type))
         if ls.entities:

@@ -84,6 +84,27 @@ class JavaAnalyzer(LanguageAnalyzer):
                 return child.text.decode("utf8")
         return ""
     
+    def _collect_method_arguments(self, method_node: Node, file_path: str, method_name: str, entities: list) -> None:
+        """Collect method/constructor arguments as entities."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        arguments_container = EntitiesContainer(f"{file_path}::{method_name}", "function_arguments")
+        
+        # Find formal_parameters node
+        for child in method_node.children:
+            if child.type == "formal_parameters":
+                for param in child.children:
+                    if param.type == "formal_parameter":
+                        # Extract identifier from typed parameter
+                        for subparam in param.children:
+                            if subparam.type == "identifier":
+                                arg_name = subparam.text.decode("utf8")
+                                arguments_container.append(Entity(arg_name, subparam))
+                                break
+        
+        if arguments_container.entities:
+            entities.append(arguments_container)
+    
     def _process_class(self, class_node: Node, file_path: str, class_name: str, entities: list) -> None:
         """Extract methods from a class."""
         from src.core.entity import Entity, EntitiesContainer
@@ -97,6 +118,13 @@ class JavaAnalyzer(LanguageAnalyzer):
                         method_name = self._get_method_name(body_child)
                         if method_name:
                             class_methods.append(Entity(method_name, body_child))
+                            # Collect method arguments
+                            self._collect_method_arguments(body_child, f"{file_path}::{class_name}", method_name, entities)
+                    elif body_child.type == "constructor_declaration":
+                        # Handle constructor
+                        class_methods.append(Entity("<init>", body_child))
+                        # Collect constructor arguments
+                        self._collect_method_arguments(body_child, f"{file_path}::{class_name}", "<init>", entities)
         
         if class_methods.entities:
             entities.append(class_methods)
@@ -114,6 +142,8 @@ class JavaAnalyzer(LanguageAnalyzer):
                         method_name = self._get_method_name(body_child)
                         if method_name:
                             interface_methods.append(Entity(method_name, body_child))
+                            # Collect method arguments
+                            self._collect_method_arguments(body_child, f"{file_path}::{interface_name}", method_name, entities)
         
         if interface_methods.entities:
             entities.append(interface_methods)

@@ -23,9 +23,7 @@ Currently it supports:
 - Ports
 - HTTP Routes
 
-### 2. Spell-Checker ✏️
 
-Checks all defined and detected documentation for spelling errors.
 
 ### 3. Partial Match Detection 🎯
 
@@ -36,12 +34,16 @@ So Ducku corresponds lists in documentation as
 - bullet points
 - markdown code snippets
 
-with potential lists in code as
+with potential lists in the project as
 - files/folders in one folder
 - JSON/YAML keys/values at the same level
-- module-level functions
-- classes
-- dictionary keys, values, and list elements
+- code specific:
+  - module-level functions
+  - module-level classes
+  - class methods
+  - function/method arguments
+  - dictionary keys, values, and list elements
+  - table-like data structures (uniform lists/arrays of objects)
 
 *Terms here are for Python, but similar structures are supported for other languages as well.
 

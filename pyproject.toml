@@ -1,6 +1,6 @@
 [project]
 name = "ducku"
-version = "0.1.1"
+version = "1.1.0"
 description = "Documentation analysis and code quality tool for multi-language projects"
 readme = "README.md"
 license = {text = "Ducku Source Available License (DSAL)"}
@@ -43,6 +43,7 @@ dependencies = [
     "tree-sitter-rust",
     "tree-sitter-ruby",
     "tree-sitter-go",
+    "pydantic>=2.12.5",
 ]
 
 [project.urls]
@@ -72,5 +73,11 @@ packages = ["src", "bin"]
 pythonpath = [
     "."
 ]
+testpaths = [
+    "test"
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 [project.scripts]
 ducku = "bin.cli:main"

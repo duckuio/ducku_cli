@@ -46,6 +46,8 @@ class GoAnalyzer(LanguageAnalyzer):
                 func_name = self._get_function_name(node)
                 if func_name:
                     module_functions.append(Entity(func_name, node))
+                    # Collect function arguments
+                    self._collect_function_arguments(node, str_file_path, func_name, entities)
             
             # Method declarations
             elif node.type == "method_declaration":
@@ -54,6 +56,8 @@ class GoAnalyzer(LanguageAnalyzer):
                 if method_name and receiver:
                     # Add method to appropriate receiver
                     self._add_method_to_receiver(receiver, method_name, node, str_file_path, entities)
+                    # Collect method arguments
+                    self._collect_function_arguments(node, f"{str_file_path}::{receiver}", method_name, entities)
             
             # Type declarations (struct, interface, etc.)
             elif node.type == "type_declaration":
@@ -71,6 +75,34 @@ class GoAnalyzer(LanguageAnalyzer):
             if child.type == "identifier":
                 return child.text.decode("utf8")
         return ""
+    
+    def _collect_function_arguments(self, func_node: Node, file_path: str, func_name: str, entities: list) -> None:
+        """Collect function/method arguments as entities."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        arguments_container = EntitiesContainer(f"{file_path}::{func_name}", "function_arguments")
+        
+        # Find parameter_list node (skip receiver in method declarations)
+        param_lists = []
+        for child in func_node.children:
+            if child.type == "parameter_list":
+                param_lists.append(child)
+        
+        # For methods, skip the first parameter_list (receiver)
+        # For functions, use the first parameter_list
+        target_params = param_lists[-1] if param_lists else None
+        
+        if target_params:
+            for param in target_params.children:
+                if param.type == "parameter_declaration":
+                    for subparam in param.children:
+                        if subparam.type == "identifier":
+                            arg_name = subparam.text.decode("utf8")
+                            arguments_container.append(Entity(arg_name, subparam))
+                            break
+        
+        if arguments_container.entities:
+            entities.append(arguments_container)
     
     def _get_method_name(self, node: Node) -> str:
         """Extract method name from method_declaration."""

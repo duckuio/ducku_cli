@@ -42,6 +42,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         module_dict_keys_containers = {}
         module_dict_values_containers = {}
         module_list_elements_containers = {}
+        module_table_records_containers = {}
         
         for child in root_node.children:
             # Function definitions at module level
@@ -77,6 +78,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                 self._extract_dict_keys_from_statement(child, module_dict_keys_containers, str_file_path)
                 self._extract_dict_values_from_statement(child, module_dict_values_containers, str_file_path)
                 self._extract_list_elements_from_statement(child, module_list_elements_containers, str_file_path)
+                self._extract_table_records_from_statement(child, module_table_records_containers, str_file_path)
         
         # Add containers if they have entities
         if module_functions.entities:
@@ -92,6 +94,10 @@ class PythonAnalyzer(LanguageAnalyzer):
         for container in module_list_elements_containers.values():
             if container.entities:
                 entities.append(container)
+        for key_containers in module_table_records_containers.values():
+            for container in key_containers.values():
+                if container.entities:
+                    entities.append(container)
     
     def collect_imports(self, file_path: Path) -> Set[str]:
         """
@@ -156,6 +162,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         class_dict_keys_containers = {}
         class_dict_values_containers = {}
         class_list_elements_containers = {}
+        class_table_records_containers = {}
         
         # Find class body
         for child in class_node.children:
@@ -184,9 +191,11 @@ class PythonAnalyzer(LanguageAnalyzer):
                             method_dict_keys_containers = {}
                             method_dict_values_containers = {}
                             method_list_elements_containers = {}
+                            method_table_records_containers = {}
                             self._extract_dict_keys_from_node(func_node, method_dict_keys_containers, f"{file_path}::{class_name}::{method_name}")
                             self._extract_dict_values_from_node(func_node, method_dict_values_containers, f"{file_path}::{class_name}::{method_name}")
                             self._extract_list_elements_from_node(func_node, method_list_elements_containers, f"{file_path}::{class_name}::{method_name}")
+                            self._extract_table_records_from_node(func_node, method_table_records_containers, f"{file_path}::{class_name}::{method_name}")
                             for container in method_dict_keys_containers.values():
                                 if container.entities:
                                     entities.append(container)
@@ -196,6 +205,10 @@ class PythonAnalyzer(LanguageAnalyzer):
                             for container in method_list_elements_containers.values():
                                 if container.entities:
                                     entities.append(container)
+                            for key_containers in method_table_records_containers.values():
+                                for container in key_containers.values():
+                                    if container.entities:
+                                        entities.append(container)
                     
                     # Handle class-level assignments (potential dictionaries or lists)
                     elif statement.type == "expression_statement":
@@ -205,6 +218,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                         self._extract_dict_keys_from_statement(statement, class_dict_keys_containers, f"{file_path}::{class_name}")
                         self._extract_dict_values_from_statement(statement, class_dict_values_containers, f"{file_path}::{class_name}")
                         self._extract_list_elements_from_statement(statement, class_list_elements_containers, f"{file_path}::{class_name}")
+                        self._extract_table_records_from_statement(statement, class_table_records_containers, f"{file_path}::{class_name}")
         
         # Add containers if they have entities
         if class_methods.entities:
@@ -220,6 +234,10 @@ class PythonAnalyzer(LanguageAnalyzer):
         for container in class_list_elements_containers.values():
             if container.entities:
                 entities.append(container)
+        for key_containers in class_table_records_containers.values():
+            for container in key_containers.values():
+                if container.entities:
+                    entities.append(container)
     
     def _extract_properties_from_node(self, node: Node, properties_container: EntitiesContainer) -> None:
         """Recursively extract property names from a node and its children."""
@@ -241,7 +259,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                     if attribute_node:
                         prop_name = attribute_node.text.decode("utf8")
                         # Avoid duplicates
-                        existing_names = [e.name for e in properties_container.entities]
+                        existing_names = [e.content for e in properties_container.entities]
                         if prop_name not in existing_names:
                             properties_container.append(Entity(prop_name, attribute_node))
         
@@ -268,7 +286,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                 # Only add if it has a type annotation (to distinguish from regular assignments)
                 if field_name and has_type_annotation:
                     # Avoid duplicates
-                    existing_names = [e.name for e in properties_container.entities]
+                    existing_names = [e.content for e in properties_container.entities]
                     if field_name not in existing_names:
                         properties_container.append(Entity(field_name, child))
     
@@ -400,7 +418,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                             )
                         
                         container = dict_keys_containers[var_name]
-                        existing_keys = [e.name for e in container.entities]
+                        existing_keys = [e.content for e in container.entities]
                         for key in keys:
                             if key not in existing_keys:
                                 container.append(Entity(key, dict_node))
@@ -437,7 +455,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                         )
                     
                     container = dict_keys_containers[var_name]
-                    existing_keys = [e.name for e in container.entities]
+                    existing_keys = [e.content for e in container.entities]
                     for key in keys:
                         if key not in existing_keys:
                             container.append(Entity(key, dict_node))
@@ -479,7 +497,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                             )
                         
                         container = dict_values_containers[var_name]
-                        existing_values = [e.name for e in container.entities]
+                        existing_values = [e.content for e in container.entities]
                         for value in values:
                             if value not in existing_values:
                                 container.append(Entity(value, dict_node))
@@ -516,7 +534,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                         )
                     
                     container = dict_values_containers[var_name]
-                    existing_values = [e.name for e in container.entities]
+                    existing_values = [e.content for e in container.entities]
                     for value in values:
                         if value not in existing_values:
                             container.append(Entity(value, dict_node))
@@ -558,7 +576,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                             )
                         
                         container = list_elements_containers[var_name]
-                        existing_elements = [e.name for e in container.entities]
+                        existing_elements = [e.content for e in container.entities]
                         for element in elements:
                             if element not in existing_elements:
                                 container.append(Entity(element, list_node))
@@ -595,7 +613,7 @@ class PythonAnalyzer(LanguageAnalyzer):
                         )
                     
                     container = list_elements_containers[var_name]
-                    existing_elements = [e.name for e in container.entities]
+                    existing_elements = [e.content for e in container.entities]
                     for element in elements:
                         if element not in existing_elements:
                             container.append(Entity(element, list_node))
@@ -633,3 +651,127 @@ class PythonAnalyzer(LanguageAnalyzer):
         # Recurse through children
         for child in node.children:
             self._extract_python_imports(child, imports)
+    
+    def _extract_table_records_from_statement(self, statement: Node, table_records_containers: dict, parent_path: str) -> None:
+        """Extract table-like records from list assignments like VAR = [{...}, {...}]."""
+        for child in statement.children:
+            if child.type == "assignment":
+                var_name = None
+                list_node = None
+                
+                for assign_child in child.children:
+                    if assign_child.type == "identifier" and var_name is None:
+                        var_name = assign_child.text.decode("utf8")
+                    elif assign_child.type == "attribute" and var_name is None:
+                        for attr_child in assign_child.children:
+                            if attr_child.type == "identifier":
+                                text = attr_child.text.decode("utf8")
+                                if text != "self":
+                                    var_name = text
+                    elif assign_child.type == "list":
+                        list_node = assign_child
+                
+                if var_name and list_node:
+                    self._process_table_list(list_node, var_name, table_records_containers, parent_path)
+    
+    def _extract_table_records_from_node(self, node: Node, table_records_containers: dict, parent_path: str) -> None:
+        """Recursively extract table-like records from a node and its children."""
+        if node.type == "assignment":
+            var_name = None
+            list_node = None
+            
+            for child in node.children:
+                if child.type == "identifier" and var_name is None:
+                    var_name = child.text.decode("utf8")
+                elif child.type == "attribute" and var_name is None:
+                    for attr_child in child.children:
+                        if attr_child.type == "identifier":
+                            text = attr_child.text.decode("utf8")
+                            if text != "self":
+                                var_name = text
+                elif child.type == "list":
+                    list_node = child
+            
+            if var_name and list_node:
+                self._process_table_list(list_node, var_name, table_records_containers, parent_path)
+        
+        for child in node.children:
+            self._extract_table_records_from_node(child, table_records_containers, parent_path)
+    
+    def _process_table_list(self, list_node: Node, var_name: str, table_records_containers: dict, parent_path: str) -> None:
+        """Process a list to check if it contains uniform dictionaries (table-like data)."""
+        dicts = []
+        
+        # Collect all dictionary nodes from the list
+        for child in list_node.children:
+            if child.type == "dictionary":
+                dicts.append(child)
+        
+        # Need at least 2 dictionaries to consider it table-like
+        if len(dicts) < 2:
+            return
+        
+        # Extract keys from all dictionaries
+        all_keys_lists = []
+        for dict_node in dicts:
+            keys = set()
+            for dict_child in dict_node.children:
+                if dict_child.type == "pair":
+                    for pair_child in dict_child.children:
+                        if pair_child.type == "string":
+                            key_text = pair_child.text.decode("utf8")
+                            if len(key_text) >= 2 and key_text[0] in ('"', "'") and key_text[-1] in ('"', "'"):
+                                keys.add(key_text[1:-1])
+                            break
+            all_keys_lists.append(keys)
+        
+        # Check if all dictionaries have the same keys
+        if not all_keys_lists:
+            return
+        
+        first_keys = all_keys_lists[0]
+        if not all(keys == first_keys for keys in all_keys_lists):
+            return
+        
+        # All dictionaries have the same keys - extract values for each key
+        if var_name not in table_records_containers:
+            table_records_containers[var_name] = {}
+        
+        for key in first_keys:
+            values = []
+            for dict_node in dicts:
+                for dict_child in dict_node.children:
+                    if dict_child.type == "pair":
+                        found_key = None
+                        value = None
+                        for pair_child in dict_child.children:
+                            if pair_child.type == "string" and found_key is None:
+                                key_text = pair_child.text.decode("utf8")
+                                if len(key_text) >= 2 and key_text[0] in ('"', "'") and key_text[-1] in ('"', "'"):
+                                    found_key = key_text[1:-1]
+                            elif pair_child.type == ":":
+                                continue
+                            elif found_key == key:
+                                if pair_child.type == "string":
+                                    value_text = pair_child.text.decode("utf8")
+                                    if len(value_text) >= 2 and value_text[0] in ('"', "'") and value_text[-1] in ('"', "'"):
+                                        value = value_text[1:-1]
+                                break
+                        
+                        if found_key == key and value:
+                            values.append(value)
+                            break
+            
+            if values:
+                if key not in table_records_containers[var_name]:
+                    table_records_containers[var_name][key] = EntitiesContainer(
+                        f"{parent_path}::{var_name}::{key}",
+                        "table_records"
+                    )
+                
+                container = table_records_containers[var_name][key]
+                existing_values = [e.content for e in container.entities]
+                for value in values:
+                    if value not in existing_values:
+                        container.append(Entity(value, list_node))
+

@@ -45,7 +45,7 @@ api:
     # Collect all entity names from code blocks
     all_names = []
     for container in code_block_containers:
-        all_names.extend([e.name for e in container.entities])
+        all_names.extend([e.content for e in container.entities])
     
     # Check for keys from first YAML block
     assert "database" in all_names
@@ -104,7 +104,7 @@ def test_json_code_block_extraction():
     # Collect all entity names
     all_names = []
     for container in code_block_containers:
-        all_names.extend([e.name for e in container.entities])
+        all_names.extend([e.content for e in container.entities])
     
     # Check for keys
     assert "app_name" in all_names
@@ -191,7 +191,7 @@ valid:
     # Even if bad YAML is ignored, good YAML should be processed
     all_names = []
     for container in code_block_containers:
-        all_names.extend([e.name for e in container.entities])
+        all_names.extend([e.content for e in container.entities])
     
     assert "valid" in all_names
     assert "yaml" in all_names

@@ -51,6 +51,9 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
         # Collect module-level classes
         module_classes = EntitiesContainer(str_file_path, "module_classes")
         
+        # Collect module-level table records
+        module_table_records_containers = {}
+        
         # Traverse top-level nodes
         for node in root_node.children:
             # Function declarations
@@ -58,10 +61,13 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
                 func_name = self._get_function_name(node)
                 if func_name:
                     module_functions.append(Entity(func_name, node))
+                    # Collect function arguments
+                    self._collect_function_arguments(node, str_file_path, func_name, entities)
             
             # Arrow functions / const assignments
             elif node.type in ("lexical_declaration", "variable_declaration"):
                 self._extract_arrow_functions(node, module_functions)
+                self._extract_table_records_from_declaration(node, module_table_records_containers, str_file_path)
             
             # Class declarations
             elif node.type == "class_declaration":
@@ -80,6 +86,10 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
             entities.append(module_functions)
         if module_classes.entities:
             entities.append(module_classes)
+        for key_containers in module_table_records_containers.values():
+            for container in key_containers.values():
+                if container.entities:
+                    entities.append(container)
     
     def _get_function_name(self, node: Node) -> str:
         """Extract function name from function_declaration."""
@@ -94,6 +104,37 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
             if child.type == "type_identifier" or child.type == "identifier":
                 return child.text.decode("utf8")
         return ""
+    
+    def _collect_function_arguments(self, func_node: Node, file_path: str, func_name: str, entities: list) -> None:
+        """Collect function/method arguments as entities."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        arguments_container = EntitiesContainer(f"{file_path}::{func_name}", "function_arguments")
+        
+        # Find formal_parameters or required_parameters node
+        for child in func_node.children:
+            if child.type in ("formal_parameters", "required_parameters"):
+                for param in child.children:
+                    if param.type == "identifier":
+                        arg_name = param.text.decode("utf8")
+                        arguments_container.append(Entity(arg_name, param))
+                    elif param.type == "required_parameter":
+                        # Typed parameters
+                        for subparam in param.children:
+                            if subparam.type == "identifier":
+                                arg_name = subparam.text.decode("utf8")
+                                arguments_container.append(Entity(arg_name, subparam))
+                                break
+                    elif param.type == "optional_parameter":
+                        # Default parameters
+                        for subparam in param.children:
+                            if subparam.type == "identifier":
+                                arg_name = subparam.text.decode("utf8")
+                                arguments_container.append(Entity(arg_name, subparam))
+                                break
+        
+        if arguments_container.entities:
+            entities.append(arguments_container)
     
     def _extract_arrow_functions(self, declaration: Node, functions_container) -> None:
         """Extract arrow functions from lexical/variable declarations."""
@@ -126,6 +167,8 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
                         method_name = self._get_method_name(body_child)
                         if method_name:
                             class_methods.append(Entity(method_name, body_child))
+                            # Collect method arguments
+                            self._collect_function_arguments(body_child, f"{file_path}::{class_name}", method_name, entities)
         
         if class_methods.entities:
             entities.append(class_methods)
@@ -207,3 +250,95 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
         # Recurse through children
         for child in node.children:
             self._extract_ts_imports(child, imports)
+    
+    def _extract_table_records_from_declaration(self, declaration: Node, table_records_containers: dict, parent_path: str) -> None:
+        """Extract table-like records from const/let/var declarations."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        for child in declaration.children:
+            if child.type == "variable_declarator":
+                var_name = None
+                array_node = None
+                
+                for declarator_child in child.children:
+                    if declarator_child.type == "identifier":
+                        var_name = declarator_child.text.decode("utf8")
+                    elif declarator_child.type == "array":
+                        array_node = declarator_child
+                
+                if var_name and array_node:
+                    self._process_table_array(array_node, var_name, table_records_containers, parent_path)
+    
+    def _process_table_array(self, array_node: Node, var_name: str, table_records_containers: dict, parent_path: str) -> None:
+        """Process an array to check if it contains uniform objects (table-like data)."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        objects = []
+        for child in array_node.children:
+            if child.type == "object":
+                objects.append(child)
+        
+        if len(objects) < 2:
+            return
+        
+        # Extract keys from all objects
+        all_keys_lists = []
+        for obj_node in objects:
+            keys = set()
+            for obj_child in obj_node.children:
+                if obj_child.type == "pair":
+                    for pair_child in obj_child.children:
+                        if pair_child.type in ("property_identifier", "string"):
+                            key_text = pair_child.text.decode("utf8")
+                            if key_text.startswith('"') or key_text.startswith("'"):
+                                key_text = key_text[1:-1]
+                            keys.add(key_text)
+                            break
+            all_keys_lists.append(keys)
+        
+        if not all_keys_lists:
+            return
+        
+        first_keys = all_keys_lists[0]
+        if not all(keys == first_keys for keys in all_keys_lists):
+            return
+        
+        if var_name not in table_records_containers:
+            table_records_containers[var_name] = {}
+        
+        for key in first_keys:
+            values = []
+            for obj_node in objects:
+                for obj_child in obj_node.children:
+                    if obj_child.type == "pair":
+                        found_key = None
+                        value = None
+                        for pair_child in obj_child.children:
+                            if pair_child.type in ("property_identifier", "string") and found_key is None:
+                                key_text = pair_child.text.decode("utf8")
+                                if key_text.startswith('"') or key_text.startswith("'"):
+                                    key_text = key_text[1:-1]
+                                found_key = key_text
+                            elif pair_child.type == ":":
+                                continue
+                            elif found_key == key and pair_child.type == "string":
+                                value_text = pair_child.text.decode("utf8")
+                                if len(value_text) >= 2 and value_text[0] in ('"', "'", "`"):
+                                    value = value_text[1:-1]
+                        
+                        if found_key == key and value:
+                            values.append(value)
+                            break
+            
+            if values:
+                if key not in table_records_containers[var_name]:
+                    table_records_containers[var_name][key] = EntitiesContainer(
+                        f"{parent_path}::{var_name}::{key}",
+                        "table_records"
+                    )
+                
+                container = table_records_containers[var_name][key]
+                existing_values = [e.content for e in container.entities]
+                for value in values:
+                    if value not in existing_values:
+                        container.append(Entity(value, array_node))

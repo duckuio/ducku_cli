@@ -49,7 +49,7 @@ class Animal {
                     break
             
             self.assertIsNotNone(class_container)
-            class_names = [e.name for e in class_container.entities]
+            class_names = [e.content for e in class_container.entities]
             self.assertIn("Person", class_names)
             self.assertIn("Animal", class_names)
         finally:
@@ -84,7 +84,7 @@ public class Calculator {
                     break
             
             self.assertIsNotNone(methods_container)
-            method_names = [e.name for e in methods_container.entities]
+            method_names = [e.content for e in methods_container.entities]
             self.assertIn("add", method_names)
             self.assertIn("subtract", method_names)
         finally:
@@ -113,7 +113,7 @@ public interface Drawable {
                     break
             
             self.assertIsNotNone(class_container)
-            class_names = [e.name for e in class_container.entities]
+            class_names = [e.content for e in class_container.entities]
             self.assertIn("Drawable", class_names)
         finally:
             temp_path.unlink()
@@ -138,5 +138,50 @@ import com.example.MyClass;
             temp_path.unlink()
 
 
-if __name__ == "__main__":
+class TestJavaFunctionArguments(unittest.TestCase):
+    
+    def setUp(self):
+        self.analyzer = JavaAnalyzer()
+    
+    def test_method_arguments(self):
+        """Test collecting Java method and constructor arguments."""
+        code = """
+public class Calculator {
+    private int precision;
+    
+    public Calculator(int precision) {
+        this.precision = precision;
+    }
+    
+    public double add(double a, double b) {
+        return a + b;
+    }
+    
+    public double multiply(double x, double y, double factor) {
+        return x * y * factor;
+    }
+}
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.java', delete=False) as f:
+            f.write(code)
+            temp_path = Path(f.name)
+        
+        try:
+            entities = []
+            self.analyzer.collect_entities(temp_path, entities)
+            
+            # Find function_arguments containers
+            args_containers = [e for e in entities if e.type == "function_arguments"]
+            self.assertEqual(len(args_containers), 3)  # constructor, add, multiply
+            
+            # Check constructor arguments
+            constructor_args = next((e for e in args_containers if "Calculator::" in e.parent and "precision" in str([e.content for e in e.entities])), None)
+            self.assertIsNotNone(constructor_args)
+            arg_names = [e.content for e in constructor_args.entities]
+            self.assertIn("precision", arg_names)
+        finally:
+            temp_path.unlink()
+
+
+if __name__ == '__main__':
     unittest.main()

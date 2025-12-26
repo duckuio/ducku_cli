@@ -33,7 +33,8 @@ def start(base):
         found = False
         for uc_class, title in use_cases_to_run:
             uci = uc_class(p)
-            if p.config.disabled_use_cases and uci.name in p.config.disabled_use_cases:
+            enabled = getattr(p.config.use_case_options, uci.name).enabled
+            if not enabled:
                 continue
             r = uci.report()
             if r != "":

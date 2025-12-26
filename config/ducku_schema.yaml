@@ -1,57 +1,67 @@
-# YAML Schema for .ducku.yaml
-$schema: "http://json-schema.org/draft-07/schema#"
-title: "Ducku Config"
-type: object
-properties:
-  documentation_paths:
-    type: array
-    items:
-      type: string
-    description: "Optional paths to folders with additional markdown files."
-  documentation_paths_to_ignore:
-    type: array
-    items:
-      type: string
-    description: "Paths to exclude from collecting as documentation"
-  code_paths_to_ignore:
-    type: array
-    items:
-      type: string
-    description: "Paths to exclude from code analysis"
-  disabled_use_cases:
-    type: array
-    items:
-      type: string
-    description: "Use cases to disable"
-  use_case_options:
+$defs:
+  BaseOptions:
+    properties:
+      enabled:
+        default: true
+        title: Enabled
+        type: boolean
+    title: BaseOptions
     type: object
-    description: "Options for individual use cases"
+  PatternSearchOptions:
+    properties:
+      enabled:
+        default: true
+        title: Enabled
+        type: boolean
+      disabled_patterns:
+        anyOf:
+        - items:
+            type: string
+          type: array
+        - type: 'null'
+        title: Disabled Patterns
+    title: PatternSearchOptions
+    type: object
+  UseCasesOptions:
     properties:
       pattern_search:
-        type: object
-        properties:
-          enabled:
-            type: boolean
-          disabled_patterns:
-            type: array
-            items:
-              type: string
-            description: "Disabled patterns for pattern_search"
+        $ref: '#/$defs/PatternSearchOptions'
       unused_modules:
-        type: object
-        properties:
-          enabled:
-            type: boolean
+        $ref: '#/$defs/BaseOptions'
       spellcheck:
-        type: object
-        properties:
-          enabled:
-            type: boolean
+        $ref: '#/$defs/BaseOptions'
       partial_lists:
-        type: object
-        properties:
-          enabled:
-            type: boolean
-  fail_on_issues: false
-required: []
-additionalProperties: false
+        $ref: '#/$defs/BaseOptions'
+    title: UseCasesOptions
+    type: object
+properties:
+  documentation_paths:
+    anyOf:
+    - items:
+        type: string
+      type: array
+    - type: 'null'
+    title: Documentation Paths
+  code_paths_to_ignore:
+    anyOf:
+    - items:
+        type: string
+      type: array
+    - type: 'null'
+    title: Code Paths To Ignore
+  documentation_paths_to_ignore:
+    anyOf:
+    - items:
+        type: string
+      type: array
+    - type: 'null'
+    title: Documentation Paths To Ignore
+  use_case_options:
+    $ref: '#/$defs/UseCasesOptions'
+  fail_on_issues:
+    default: false
+    title: Fail On Issues
+    type: boolean
+title: Configuration
+type: object
+$schema: http://json-schema.org/draft-07/schema#

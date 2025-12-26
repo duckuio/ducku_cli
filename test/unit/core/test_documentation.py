@@ -92,29 +92,28 @@ Edit config.yaml
     doc = Documentation().from_string(markdown_content, "markdown")
     entities = collect_docs_entities(doc)
     
-    # Find all entity containers
-    containers_by_parent = {c.parent: c for c in entities}
-    
     # Test that h1 headers are in namespace for doc_header type
-    h1_installation_key = None
-    h1_configuration_key = None
-    for key in containers_by_parent.keys():
-        if "::h1::Installation Guide" in key and "::h2::" not in key:
-            h1_installation_key = key
-        if "::h1::Configuration" in key and "::h2::" not in key:
-            h1_configuration_key = key
+    # Note: There may be multiple containers with the same parent (from headers vs lists processing)
+    # Find the one with the most entities
+    h1_installation_container = None
+    h1_configuration_container = None
+    for c in entities:
+        if "::h1::Installation Guide" in c.parent and "::h2::" not in c.parent:
+            if h1_installation_container is None or len(c.entities) > len(h1_installation_container.entities):
+                h1_installation_container = c
+        if "::h1::Configuration" in c.parent and "::h2::" not in c.parent:
+            if h1_configuration_container is None or len(c.entities) > len(h1_configuration_container.entities):
+                h1_configuration_container = c
     
     # Check that Installation Guide header container exists
-    assert h1_installation_key is not None, "Should have container with 'Installation Guide' in namespace"
-    installation_container = containers_by_parent[h1_installation_key]
-    entity_names = [e.name for e in installation_container.entities]
+    assert h1_installation_container is not None, "Should have container with 'Installation Guide' in namespace"
+    entity_names = [e.content for e in h1_installation_container.entities]
     assert "Prerequisites" in entity_names, "Installation Guide should contain Prerequisites"
     assert "Step-by-Step" in entity_names, "Installation Guide should contain Step-by-Step"
     
     # Check that Configuration header container exists
-    assert h1_configuration_key is not None, "Should have container with 'Configuration' in namespace"
-    config_container = containers_by_parent[h1_configuration_key]
-    entity_names = [e.name for e in config_container.entities]
+    assert h1_configuration_container is not None, "Should have container with 'Configuration' in namespace"
+    entity_names = [e.content for e in h1_configuration_container.entities]
     assert "Settings File" in entity_names, "Configuration should contain Settings File header"
     
     # Verify list items are captured with header context
@@ -137,7 +136,7 @@ Edit config.yaml
     prereq_items = []
     for c in list_containers:
         if "Prerequisites" in c.parent:
-            prereq_items.extend([e.name for e in c.entities])
+            prereq_items.extend([e.content for e in c.entities])
     assert "Python 3.8+" in prereq_items, "Should capture Python 3.8+ from Prerequisites"
     assert "pip package manager" in prereq_items, "Should capture pip from Prerequisites"
 
@@ -182,13 +181,13 @@ def test_nested_doc_headers_in_namespace():
     
     # Verify Authentication subsection
     assert auth_container is not None, "Should have container for Authentication under API Reference"
-    auth_entities = [e.name for e in auth_container.entities]
+    auth_entities = [e.content for e in auth_container.entities]
     assert "OAuth2" in auth_entities, "Authentication should contain OAuth2"
     assert "API Keys" in auth_entities, "Authentication should contain API Keys"
     
     # Verify Endpoints subsection
     assert endpoints_container is not None, "Should have container for Endpoints under API Reference"
-    endpoints_entities = [e.name for e in endpoints_container.entities]
+    endpoints_entities = [e.content for e in endpoints_container.entities]
     assert "Users" in endpoints_entities, "Endpoints should contain Users"
     
     # Verify the hierarchy is clear in parent path

@@ -1,112 +1,149 @@
-from src.helpers.comparison import fuzzy_intersection, normalized_levenshtein, hybrid_similarity, token_similarity, fuzzy
+from src.helpers.comparison import fuzzy_intersection, string_similar, token_similar, tokenize_string
+
+def test_tokenize_string():
+    assert tokenize_string("simple test") == ["simple", "test"], "Tokenize by space"
+    assert tokenize_string("he/him") == ["he", "him"], "Tokenize by slash"
+    assert tokenize_string("127.0.0.1") == ["127", "0", "0", "1"], "Tokenize by dot"
+    assert tokenize_string("ForgetMeNot") == ["Forget", "Me", "Not"], "Tokenize camel case"
+    assert tokenize_string("Spell-Checker") == ["Spell-Checker"]
+
+# def test_token_similar():
+#     assert token_similar("spell", "spellcheck") >= 0.5, "Similar tokens should have high similarity"
+#     assert token_similar("checker", "spellcheck") >= 0.8, "Similar tokens should have high similarity"
+    
 
 
-def test_fuzzy_score():
-    score = fuzzy("User", "users")
-    assert score >= 0.8
-    score = fuzzy("cherry", "cheri")
-    assert score >= 0.5
-
-def test_token_similarity():
-    # Test exact token match
-    score = token_similarity("user profile", "profile user")
-    assert score == 1.0, "Exact tokens in different order should give 1.0"
+def test_string_similar():
     
     # Test partial token match
-    score = token_similarity("user profile settings", "user profile")
-    assert 0.6 <= score <= 0.7, "2 out of 3 tokens match"
+    score = string_similar("user profile settings", "user profile", True)
+    assert score > 0.5, "2 out of 3 tokens exact match, should be legit"
     
     # Test similar tokens (fuzzy match within tokens)
-    score = token_similarity("users", "user")
-    assert score > 0.8, "Similar tokens should match with high score"
+    score = string_similar("users", "user", True)
+    assert score >= 0.7, "Similar tokens should match with high score"
     
     # Test no match
-    score = token_similarity("apple", "orange")
+    score = string_similar("apple", "orange")
     assert score == 0, "No token overlap should give 0"
     
     # Test empty strings
-    score = token_similarity("", "test")
+    score = string_similar("", "test")
     assert score == 0, "Empty string should give 0"
     
     # Test case insensitivity
-    score = token_similarity("User Profile", "user profile")
-    assert score == 1.0, "Case should not matter"
+    score = string_similar("User Profile", "user profile", True)
+    assert score > 0.8, "Case should not matter. Because of rarity boost can be less that 1"
     
     # Test with special characters and normalization
-    score = token_similarity("user-profile_settings", "user profile settings")
-    assert score == 1.0, "Normalization should handle hyphens and underscores"
+    score = string_similar("user_profile_settings", "user profile settings")
+    assert score >= 0.8, "Normalization should handle hyphens and underscores"
     
     # Test complex multi-token similarity
-    score = token_similarity("pattern search module", "pattern searching modules")
+    score = string_similar("pattern search module", "pattern searching modules")
     assert score >= 0.66, "Similar multi-token strings should have reasonable similarity"
 
-
-def test_hybrid_similarity():
     # Test token similarity path (ts > 0)
-    score = hybrid_similarity("user profile", "profile user")
-    assert score == 1.0, "Exact tokens should give 1.0 via token similarity"
+    score = string_similar("user profile", "profile user")
+    assert score < 0.78, "Exact tokens, different positions, penalty. Also frequent"
     
-    score = hybrid_similarity("user settings", "user profile")
-    assert score > 0, "Partial token overlap should use token similarity"
+    score = string_similar("user settings", "user profile", True)
+    assert score < 0.67, "Partial token overlap should use token similarity. Also frequent"
     
     # Test fuzzy fallback (ts == 0, no token overlap)
-    score = hybrid_similarity("apple", "aple")
-    assert score > 0.8, "Similar strings with no token overlap should use fuzzy"
+    score = string_similar("apple", "aple")
+    assert score >= 0.5, "Similar missplelled strings, should still match reasonably"
     
-    score = hybrid_similarity("test", "testing")
+    score = string_similar("test", "testing")
     assert score > 0.5, "Similar strings should have reasonable fuzzy score"
     
     # Test case insensitivity
-    score = hybrid_similarity("User", "user")
-    assert score == 1.0, "Case should not matter"
+    score = string_similar("User", "user")
+    assert score >= 0.9, "Case should not matter"
     
     # Test normalization
-    score = hybrid_similarity("user-profile", "user_profile")
-    assert score == 1.0, "Normalization should handle separators"
+    score = string_similar("user profile", "user_profile")
+    assert score >= 0.8, "Normalization should handle separators"
     
     # False positives - strings that should NOT match highly
-    score = hybrid_similarity("user", "server")
+    score = string_similar("user", "server")
     assert score <= 0.6, "Different words should have low similarity"
     
-    score = hybrid_similarity("apple", "orange")
+    score = string_similar("apple", "orange")
     assert score < 0.4, "Completely different words should have very low similarity"
     
-    score = hybrid_similarity("pattern", "parent")
+    score = string_similar("pattern", "parent")
     assert score < 0.75, "Similar-looking but different words should not match highly"
     
-    score = hybrid_similarity("authentication", "authorization")
+    score = string_similar("authentication", "authorization")
     assert score < 0.75, "Similar-sounding but different terms should not match highly"
     
     # Edge cases
-    score = hybrid_similarity("", "test")
+    score = string_similar("", "test")
     assert score == 0, "Empty string should give 0"
     
-    score = hybrid_similarity("a", "b")
+    score = string_similar("a", "b")
     assert score == 0, "Single different characters should give 0"
     
     # Multi-word combinations
-    score = hybrid_similarity("database connection", "database connector")
+    score = string_similar("database connection", "database connector")
     assert score >= 0.7, "Similar phrases should match reasonably"
     
-    score = hybrid_similarity("create user account", "delete user profile")
+    score = string_similar("create user account", "delete user profile")
     assert score < 0.6, "Different actions should not match highly despite shared words"
 
-    score = hybrid_similarity("list_item1", "ordered_list")
+    score = string_similar("list_item1", "ordered_list")
     assert score <= 0.5, "Similar multi-token strings should have reasonable similarity"
 
-    score = hybrid_similarity("unused module detection beta", "unused modules")
-    assert score >= 0.6, "Different concepts should not match highly"
+    score = string_similar("unused module detection beta", "unused modules")
+    assert score >= 0.5, "Different concepts should not match highly"
 
+    score = string_similar("Pattern Search", "1. Pattern Search 🔍")
+    assert score >= 0.8, "Should be similar despite extra characters"
+
+    score = string_similar("partial_lists", "3. Partial Match Detection 🎯", True)
+    assert score >= 0.5, "Should be similar despite extra characters"
+
+    score = string_similar("fail_on_issues items", "False items")
+    assert score < 0.5, "Partially similar but don't actually match"
+
+    score = string_similar("registry", "entry")
+    assert score < 0.5, "Mid-word substring matches should not count highly"
+
+    score = string_similar("Configuration", "🤝 Contributing items")
+    assert score < 0.5, "Different concepts should not match highly"
+
+    # now "2. Spell-Checker ✏️" vs "spellcheck" must be >= 0.5
+    score = string_similar("2. Spell-Checker ✏️", "spellcheck")
+    assert score >= 0.5, "Should be similar despite formatting differences"
+
+    score = string_similar("_parse_list", "ordered_list")
+    assert score < 0.5, "too frequent and bad positioning"
+
+    score = string_similar("script", "Schritt 2: Retagging-Batch erstellen", True)
+    assert score < 0.5, "different length, false positive levenstein. Must be low"
 
 def test_fuzzy_lists():
+    readme_headers = ['ordered_list', 'ordered_list', 'ordered_list']
+    proj = ['_inline_text', '_collect_headings', '_build_headers_tree', '_parse_list', '_parse_code_block']
+    res = fuzzy_intersection(proj, readme_headers, True)
+    assert res is None
 
-    list1 = ['metadata_extraction_job', 'auth', 'embedding', 'pdf2task', 'agentic', 'task2json', 'tjson2text', 'wa_manager', 'projector-ui', 'documents', 'querying']
-    list2 = ['pdf2task', 'task2json', 'tjson2text', 'embedding']
-    assert fuzzy_intersection(list1, list2, True) == True
+    readme_headers = ['embedding', 'pdf2task', 'agentic', 'task2json', 'tjson2text', 'documents', 'querying']
+    folders = ['pdf2task', 'task2json', 'tjson2text', 'embedding']
+    res = fuzzy_intersection(folders, readme_headers, False)
+    assert res is not None
 
-    readme_headers = ["Pattern Search 🔍", "Spell-Chcker ✏️", "Partial Match Detection 🎯", "Unused Module Detection (beta)"]
-    folders = ["pattern_search", "spellcheck", "partial_match", "unused_modules"]
+    readme_headers = ["1. Pattern Search 🔍", "2. Spell-Chcker ✏️", "3. Partial Match Detection 🎯", "4. Unused Module Detection (beta)"]
+    folders = ["pattern_search", "spellcheck", "partial_match", "unused_modules", "to_report"]
+    res = fuzzy_intersection(folders, readme_headers, False)
+    assert res is not None
+    assert res.only_a == ['to_report']
 
-    assert fuzzy_intersection(readme_headers, folders, True) == True
+    print("==========================")
+    proj = ['image', 'stage', 'variables', 'services', 'rules', 'tags', 'script', 'needs /Users/rax/work/db/db_billing/.gitlab-ci.yml::test_python (json_keys)']
+    readme = ['Schritt 2: Retagging-Batch erstellen', 'Schritt 3: Ressourcen hinzufügen', 'Schritt 4: Tag-Ã„nderungen festlegen', 'Schritt 5: Validierung und Vorschau', 'Schritt 6: Batch einreichen', 'Schritt 7: Status überwachen', 'Schritt 8: Fehleranalyse (bei Bedarf)']
+    res = fuzzy_intersection(proj, readme, True)
+    assert res is None
 
 

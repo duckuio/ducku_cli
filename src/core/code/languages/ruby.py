@@ -39,6 +39,14 @@ class RubyAnalyzer(LanguageAnalyzer):
         # Collect module-level classes and modules
         module_classes = EntitiesContainer(str_file_path, "module_classes")
         
+        # Collect module-level table records
+        module_table_records_containers = {}
+        
+        # Collect table records from module-level assignments
+        for node in root_node.children:
+            if node.type == "assignment":
+                self._extract_table_records_from_assignment(node, module_table_records_containers, str_file_path)
+        
         # Traverse top-level nodes
         for node in root_node.children:
             # Method definitions at top level
@@ -46,6 +54,8 @@ class RubyAnalyzer(LanguageAnalyzer):
                 method_name = self._get_method_name(node)
                 if method_name:
                     module_functions.append(Entity(method_name, node))
+                    # Collect method arguments
+                    self._collect_method_arguments(node, str_file_path, method_name, entities)
             
             # Class definitions
             elif node.type == "class":
@@ -68,6 +78,10 @@ class RubyAnalyzer(LanguageAnalyzer):
             entities.append(module_functions)
         if module_classes.entities:
             entities.append(module_classes)
+        for key_containers in module_table_records_containers.values():
+            for container in key_containers.values():
+                if container.entities:
+                    entities.append(container)
     
     def _get_method_name(self, node: Node) -> str:
         """Extract method name from method node."""
@@ -75,6 +89,30 @@ class RubyAnalyzer(LanguageAnalyzer):
             if child.type == "identifier":
                 return child.text.decode("utf8")
         return ""
+    
+    def _collect_method_arguments(self, method_node: Node, file_path: str, method_name: str, entities: list) -> None:
+        """Collect method arguments as entities."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        arguments_container = EntitiesContainer(f"{file_path}::{method_name}", "function_arguments")
+        
+        # Find method_parameters node
+        for child in method_node.children:
+            if child.type == "method_parameters":
+                for param in child.children:
+                    if param.type == "identifier":
+                        arg_name = param.text.decode("utf8")
+                        arguments_container.append(Entity(arg_name, param))
+                    elif param.type == "optional_parameter":
+                        # Default parameters
+                        for subparam in param.children:
+                            if subparam.type == "identifier":
+                                arg_name = subparam.text.decode("utf8")
+                                arguments_container.append(Entity(arg_name, subparam))
+                                break
+        
+        if arguments_container.entities:
+            entities.append(arguments_container)
     
     def _get_class_name(self, node: Node) -> str:
         """Extract class name from class node."""
@@ -104,6 +142,8 @@ class RubyAnalyzer(LanguageAnalyzer):
                         method_name = self._get_method_name(statement)
                         if method_name:
                             class_methods.append(Entity(method_name, statement))
+                            # Collect method arguments
+                            self._collect_method_arguments(statement, f"{file_path}::{class_name}", method_name, entities)
         
         if class_methods.entities:
             entities.append(class_methods)
@@ -122,6 +162,8 @@ class RubyAnalyzer(LanguageAnalyzer):
                         method_name = self._get_method_name(statement)
                         if method_name:
                             module_methods.append(Entity(method_name, statement))
+                            # Collect method arguments
+                            self._collect_method_arguments(statement, f"{file_path}::{module_name}", method_name, entities)
         
         if module_methods.entities:
             entities.append(module_methods)
@@ -161,3 +203,97 @@ class RubyAnalyzer(LanguageAnalyzer):
         # Recurse through children
         for child in node.children:
             self._extract_ruby_imports(child, imports)
+    
+    def _extract_table_records_from_assignment(self, assignment_node: Node, table_records_containers: dict, parent_path: str) -> None:
+        """Extract table-like records from array assignments."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        var_name = None
+        array_node = None
+        
+        for child in assignment_node.children:
+            if child.type in ("constant", "identifier"):
+                var_name = child.text.decode("utf8")
+            elif child.type == "array":
+                array_node = child
+        
+        if var_name and array_node:
+            self._process_table_array_ruby(array_node, var_name, table_records_containers, parent_path)
+    
+    def _process_table_array_ruby(self, array_node: Node, var_name: str, table_records_containers: dict, parent_path: str) -> None:
+        """Process a Ruby array to check if it contains uniform hashes (table-like data)."""
+        from src.core.entity import Entity, EntitiesContainer
+        
+        hashes = []
+        for child in array_node.children:
+            if child.type == "hash":
+                hashes.append(child)
+        
+        if len(hashes) < 2:
+            return
+        
+        # Extract keys from all hashes
+        all_keys_lists = []
+        for hash_node in hashes:
+            keys = set()
+            for hash_child in hash_node.children:
+                if hash_child.type == "pair":
+                    for pair_child in hash_child.children:
+                        if pair_child.type in ("string", "simple_symbol"):
+                            key_text = pair_child.text.decode("utf8")
+                            if key_text.startswith('"') or key_text.startswith("'"):
+                                key_text = key_text[1:-1]
+                            elif key_text.startswith(":"):
+                                key_text = key_text[1:]
+                            keys.add(key_text)
+                            break
+            all_keys_lists.append(keys)
+        
+        if not all_keys_lists:
+            return
+        
+        first_keys = all_keys_lists[0]
+        if not all(keys == first_keys for keys in all_keys_lists):
+            return
+        
+        if var_name not in table_records_containers:
+            table_records_containers[var_name] = {}
+        
+        for key in first_keys:
+            values = []
+            for hash_node in hashes:
+                for hash_child in hash_node.children:
+                    if hash_child.type == "pair":
+                        found_key = None
+                        value = None
+                        for pair_child in hash_child.children:
+                            if pair_child.type in ("string", "simple_symbol") and found_key is None:
+                                key_text = pair_child.text.decode("utf8")
+                                if key_text.startswith('"') or key_text.startswith("'"):
+                                    key_text = key_text[1:-1]
+                                elif key_text.startswith(":"):
+                                    key_text = key_text[1:]
+                                found_key = key_text
+                            elif pair_child.type == "=>":
+                                continue
+                            elif found_key == key and pair_child.type == "string":
+                                value_text = pair_child.text.decode("utf8")
+                                if len(value_text) >= 2 and value_text[0] in ('"', "'"):
+                                    value = value_text[1:-1]
+                        
+                        if found_key == key and value:
+                            values.append(value)
+                            break
+            
+            if values:
+                if key not in table_records_containers[var_name]:
+                    table_records_containers[var_name][key] = EntitiesContainer(
+                        f"{parent_path}::{var_name}::{key}",
+                        "table_records"
+                    )
+                
+                container = table_records_containers[var_name][key]
+                existing_values = [e.content for e in container.entities]
+                for value in values:
+                    if value not in existing_values:
+                        container.append(Entity(value, array_node))
