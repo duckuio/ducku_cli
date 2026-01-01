@@ -123,6 +123,10 @@ def test_string_similar():
     score = string_similar("script", "Schritt 2: Retagging-Batch erstellen", True)
     assert score < 0.5, "different length, false positive levenstein. Must be low"
 
+    # Needs semantic understanding to match
+    #score = string_similar("UploadObjectUnitTests", "Upload a directory", True)
+    #assert score < 0.5, "different concepts, should be low, although the first token overlaps"
+
 def test_fuzzy_lists():
     readme_headers = ['ordered_list', 'ordered_list', 'ordered_list']
     proj = ['_inline_text', '_collect_headings', '_build_headers_tree', '_parse_list', '_parse_code_block']

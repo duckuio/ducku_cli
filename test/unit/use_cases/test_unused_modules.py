@@ -117,7 +117,82 @@ import('./dynamic-module');
             with self.subTest(file_path=file_path):
                 result = self.unused_modules.is_test_file(file_path)
                 self.assertEqual(result, expected_is_test)
-
-
+    
+    def test_extract_imports_ruby(self):
+        """Test Ruby import extraction with path normalization."""
+        content = """
+require 'instance_agent/config'
+require 'aws/codedeploy/local/deployer'
+require_relative '../helper'
+load 'some_script.rb'
+        """
+        
+        # Create a temporary file to test
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.rb', delete=False) as f:
+            f.write(content)
+            temp_path = Path(f.name)
+        
+        try:
+            imports = collect_imports_from_content(temp_path)
+            # Should contain original slash-separated paths
+            self.assertIn("instance_agent/config", imports)
+            self.assertIn("aws/codedeploy/local/deployer", imports)
+            # Should also contain normalized dot-separated versions
+            self.assertIn("instance_agent.config", imports)
+            self.assertIn("aws.codedeploy.local.deployer", imports)
+            # Should contain just the basename
+            self.assertIn("config", imports)
+            self.assertIn("deployer", imports)
+        finally:
+            temp_path.unlink()
+    
+    def test_is_entry_point_file(self):
+        """Test entry point file detection."""
+        # Set up mock project with a specific name for testing
+        self.project.project_root = Path("/project/aws-codedeploy-agent")
+        
+        test_cases = [
+            # Global patterns
+            (Path("/project/aws-codedeploy-agent/bin/codedeploy-agent"), True),
+            (Path("/project/aws-codedeploy-agent/lib/codedeploy-agent.rb"), True),  # Matches project name
+            (Path("/project/lib/some-other-lib.rb"), False),
+            (Path("/project/features/step_definitions/agent_steps.rb"), True),
+            (Path("/project/features/support/env.rb"), True),
+            (Path("/project/vendor/gems/simple_pid-0.2.1/lib/core_ext/string.rb"), True),  # Vendor directory
+            (Path("/project/src/main.py"), True),
+            (Path("/project/src/index.js"), True),
+            (Path("/project/src/utils.py"), False),
+            (Path("/project/lib/helper.rb"), False),
+            
+            # Ruby-specific
+            (Path("/project/lib/winagent.rb"), True),
+            (Path("/project/lib/register.rb"), True),
+            (Path("/project/src/cli.rb"), True),
+            
+            # JavaScript-specific (config files)
+            (Path("/project/webpack.config.js"), True),
+            (Path("/project/plugin/webview/webpack.config.js"), True),
+            (Path("/project/vite.config.js"), True),
+            (Path("/project/jest.config.js"), True),
+            (Path("/project/src/utils.js"), False),
+            
+            # TypeScript-specific
+            (Path("/project/src/defs.d.ts"), True),  # Declaration file
+            (Path("/project/src/vue.shims.d.ts"), True),  # Declaration file
+            (Path("/project/webpack.config.ts"), True),  # Config file
+            (Path("/project/src/utils.ts"), False),
+            
+            # Java-specific (reflection-based usage)
+            (Path("/project/src/models/User.java"), True),
+            (Path("/project/src/model/ChatMessage.java"), True),
+            (Path("/project/src/dto/RequestParams.java"), True),
+            (Path("/project/src/handlers/MyHandler.java"), True),
+            (Path("/project/src/service/UserService.java"), False),
+        ]
+        
+        for file_path, expected_is_entry_point in test_cases:
+            with self.subTest(file_path=file_path):
+                result = self.unused_modules.is_entry_point_file(file_path)
+                self.assertEqual(result, expected_is_entry_point)
 if __name__ == "__main__":
     unittest.main()

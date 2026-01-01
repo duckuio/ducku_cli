@@ -65,6 +65,10 @@ def info_weight(t: str) -> float:
     return 0.35 if t in GENERIC_TOKENS else 1.0
 
 def soft_overlap_avglen(tokens_a: List[str], tokens_b: List[str], debug: bool = False) -> float:
+    """
+    Compute weighted fuzzy overlap between two token lists [0-1]
+    Accounts for token mirror position, informativeness, and Levenshtein similarity.
+    """
     if not tokens_a and not tokens_b:
         return 1.0
     if not tokens_a or not tokens_b:
@@ -174,6 +178,7 @@ def fuzzy_intersection(list_a: List[str], list_b: List[str], debug = False) -> O
             if debug:
                 print(debug_str)
             if score > LISTS_SIMILARITY_THRESHOLD:
+                
                 found_b_i_for_a = b_i
                 matched_debug.append(debug_str)
                 # matched items in the second list must not match anything else to avoid duplicated scores

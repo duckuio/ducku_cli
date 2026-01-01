@@ -5,20 +5,23 @@ from src.core.project import Project
 
 def test_filenames():
     # Standalone filename (should match)
-    standalone = DocString("Lorem Ipsum index.html Ipsum Lorem", "test")
+    standalone = DocString("Lorem Ipsum config.yaml Ipsum Lorem", "test")
     
     # filename in relative path (should still match the filename part)
-    relpath = DocString("Lorem Ipsum ./abc/index.html Ipsum Lorem", "test")
+    relpath = DocString("Lorem Ipsum ./abc/config.yaml Ipsum Lorem", "test")
     
     # filename in absolute path (should still match the filename part)
-    abs_path = DocString("Lorem Ipsum /tmp/abc/index.html Ipsum Lorem", "test")
+    abs_path = DocString("Lorem Ipsum /tmp/abc/config.yaml Ipsum Lorem", "test")
     
     # no filenames
     nothing = DocString("Lorem Ipsum Lorem Ipsum Lorem Ipsum", "test")
     
     # if filename is part of URL - should be filtered out
-    in_url1 = DocString("Lorem Ipsum https://google.com/index.html Ipsum Lorem", "test")
+    in_url1 = DocString("Lorem Ipsum https://google.com/page.html Ipsum Lorem", "test")
     in_url2 = DocString("<li><a href=\"https://github.com/abc/discord.py\">Discord.py</a></li>", "test")
+    
+    # index.html is in exclusions (too common as generic reference)
+    excluded = DocString("Lorem Ipsum index.html Ipsum Lorem", "test")
 
     # Find the filename pattern from all_patterns
     filename_pattern = next(p for p in all_patterns if p.name == "Filename")
@@ -29,6 +32,7 @@ def test_filenames():
     assert not filename_pattern.is_in(nothing)  # no filenames should not match
     assert not filename_pattern.is_in(in_url1)  # URL context should be filtered out
     assert not filename_pattern.is_in(in_url2)  # URL context should be filtered out
+    assert not filename_pattern.is_in(excluded)  # index.html should be excluded
 
 
 def test_unix_paths():
@@ -130,6 +134,44 @@ def test_routes():
     assert not route_pattern.is_in(false_positive1)
     assert not route_pattern.is_in(false_positive2)
     assert not route_pattern.is_in(false_positive3)
+
+
+def test_routes_false_positives():
+    """Test HTTP route detection filters out filesystem paths and file URLs via project handler."""
+    # These are tested at the project handler level, not the pattern level.
+    # The contains_route handler in Project filters out:
+    # - File extensions (.md, .json, etc.)
+    # - Filesystem prefixes (/home/, /tmp/, /path/to, etc.)
+    # - First path segment matching project folders
+    
+    from pathlib import Path
+    path = Path(__file__).parent / ".." / "mocks" / "projects" / "patterns"
+    p = Project(path)
+    
+    # Create a mock source for testing
+    class MockSource:
+        def get_root(self):
+            return None
+        def get_source_identifier(self):
+            return "test"
+    
+    source = MockSource()
+    
+    # File extensions should be skipped (returns True = "found", so no report)
+    assert p.contains_route("/docs/readme.md", source) == True
+    assert p.contains_route("/api/config.json", source) == True
+    
+    # Filesystem prefixes should be skipped
+    assert p.contains_route("/path/to/something", source) == True
+    assert p.contains_route("/home/user/file", source) == True
+    assert p.contains_route("/tmp/cache", source) == True
+    assert p.contains_route("/etc/config", source) == True
+    
+    # URL with path extracts correctly
+    assert p.contains_route("http://localhost:51678/debug/pprof/heap", source) == False  # Route not in project
+    
+    # Path starting with existing project folder (src/) should be skipped
+    assert p.contains_route("/src/something", source) == True
 
 def test_strings_in_project():
     # README contains an environment variable which is not used in the project

@@ -64,17 +64,27 @@ class SearchPattern:
         return not ("://" in context)
     
     def file_not_in_exclusions(self, m: re.Match, context: str) -> bool:
-        exclusions = ["next.js", "vue.js", "nuxt.js", "react.js", "angular.js", "svelte.js", "ember.js",
-    "django.py", "flask.py", "rails.rb", "sinatra.rb", "spring.java",
-    "laravel.php", "symfony.php",
-    "dotnet.cs", "asp.net"]
+        # Framework names that look like filenames
+        framework_exclusions = ["next.js", "vue.js", "nuxt.js", "react.js", "angular.js", "svelte.js", "ember.js",
+            "django.py", "flask.py", "rails.rb", "sinatra.rb", "spring.java",
+            "laravel.php", "symfony.php",
+            "dotnet.cs", "asp.net"]
+        # Common placeholder/example filenames that are typically not real files
+        placeholder_exclusions = ["example.csv", "example_output.csv", "sample.csv",
+            "index.html", "index.htm"]  # index.html is too common as a generic reference
+        # Placeholder prefixes (my_file.txt, your_file.txt patterns)
+        placeholder_prefixes = ["my_", "your_"]
+        exclusions = framework_exclusions + placeholder_exclusions
         txt = m.group(0).lower()
-        return not any(ex in txt for ex in exclusions)
+        if any(ex in txt for ex in exclusions):
+            return False
+        if any(txt.startswith(prefix) for prefix in placeholder_prefixes):
+            return False
+        return True
     
     def file_correct_context(self, m: re.Match, context: str) -> bool:
         indicators = ['create', 'save']
         return not self.are_indicators_in_context(indicators, m, context)
-    
 
     def is_route_context(self, m: re.Match, context: str) -> bool:
         route_indicators = ['route', 'endpoint', 'url', 'request', 'get', 'post', 'put', 'delete', 'patch', 'curl']
@@ -131,6 +141,12 @@ class SearchPattern:
         return False
     
     def is_env_var_context(self, m: re.Match, context: str) -> bool:
+        # Common env vars set by user/system, not project-specific
+        common_env_vars = ['JAVA_HOME', 'JAVA_OPTS', 'PATH', 'HOME', 'USER', 'SHELL',
+            'PYTHONPATH', 'NODE_PATH', 'GOPATH', 'GOROOT', 'CARGO_HOME', 'RUSTUP_HOME']
+        txt = m.group(0)
+        if txt in common_env_vars:
+            return False  # Skip common env vars
         env_indicators = ['variable', 'environment', 'env', 'var', 'envvar', 'env_var']
         return self.are_indicators_in_context(env_indicators, m, context)
     

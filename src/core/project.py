@@ -1,7 +1,18 @@
 from pathlib import Path
+import re
 from src.core.configuration import parse_ducku_yaml, Configuration
 from src.core.documentation import Documentation, Source
 from src.helpers.file_system import FileSystemFolder, folders_to_skip
+
+# Common OS root paths (Unix/Linux and Windows) - not project-specific
+OS_ROOT_PATHS = [
+    "~/", "/usr/", "/opt/", "/bin/", "/mnt", "/sbin/", "/lib/", "/etc/", "/var/", "/tmp/", "/home/", "/root/",
+    "/path/to", "/directory/",
+    "C:\\", "D:\\", "E:\\", "F:\\", "G:\\", "H:\\", "I:\\", "J:\\", "K:\\", "L:\\", "M:\\",
+    "N:\\", "O:\\", "P:\\", "Q:\\", "R:\\", "S:\\", "T:\\", "U:\\", "V:\\", "W:\\", "X:\\", "Y:\\", "Z:\\",
+    "C:/", "D:/", "E:/", "F:/", "G:/", "H:/", "I:/", "J:/", "K:/", "L:/", "M:/",
+    "N:/", "O:/", "P:/", "Q:/", "R:/", "S:/", "T:/", "U:/", "V:/", "W:/", "X:/", "Y:/", "Z:/"
+]
 
 class Project:
     def __init__(self, project_root: Path):
@@ -55,27 +66,73 @@ class Project:
                 return True
         return False
 
+    def _extract_route_path(self, txt: str) -> str:
+        """Extract path from full URL or return path as-is."""
+        url_match = re.match(r'https?://[^/]+(/.*)', txt)
+        if url_match:
+            return url_match.group(1)
+        return txt
+
+    def contains_route(self, route: str, source: Source) -> bool:
+        """Check if route exists in project, filtering out filesystem paths."""
+        route_path = self._extract_route_path(route)
+        
+        # Exclude file extensions - these are files, not routes
+        file_extensions = ['.md', '.txt', '.html', '.htm', '.xml', '.json', '.yaml', '.yml', 
+                          '.py', '.js', '.ts', '.go', '.java', '.rb', '.css', '.scss']
+        if any(route_path.lower().endswith(ext) for ext in file_extensions):
+            return True  # Skip - it's a file, not a missing route
+        
+        # Exclude OS/filesystem path prefixes
+        if any(route_path.startswith(prefix) for prefix in OS_ROOT_PATHS):
+            return True  # Skip - it's a filesystem path, not a route
+        
+        # Check if first path segment is an existing folder in project root
+        if route_path.startswith('/'):
+            parts = route_path.strip('/').split('/')
+            if parts and parts[0]:
+                first_segment = parts[0]
+                potential_folder = Path(self.project_root) / first_segment
+                if potential_folder.exists() and potential_folder.is_dir():
+                    return True  # Skip - first segment matches project folder
+        
+        # Now check if the route actually exists in the codebase
+        return self.contains_string(route_path, source)
+
     def contains_path(self, path: str, source: Source) -> bool:
-        # sometimes files appear as examples
-        MOCKS_TO_SKIP = [
-            "hello", "my_", "path_to", "xxx", "yyy", "zzz", "example", "sample", "log_", "log.", "logs."
+        # sometimes files appear as examples - skip placeholder-like filenames only
+        # Only skip if the filename (not directory) contains these patterns
+        MOCK_FILENAME_PATTERNS = [
+            "hello", "my_", "path_to", "xxx", "yyy", "zzz", "log_", "log.", "logs.",
+            "myfile", "yourfile"  # common placeholder filenames in docs
         ]
-        # Skip common OS root paths (Unix/Linux and Windows)
-        os_root_paths = [
-            "~/","/usr/", "/opt/", "/bin/", "/mnt", "/sbin/", "/lib/", "/etc/", "/var/", "/tmp/", "/home/", "/root/",
-            "C:\\", "D:\\", "E:\\", "F:\\", "G:\\", "H:\\", "I:\\", "J:\\", "K:\\", "L:\\", "M:\\",
-            "N:\\", "O:\\", "P:\\", "Q:\\", "R:\\", "S:\\", "T:\\", "U:\\", "V:\\", "W:\\", "X:\\", "Y:\\", "Z:\\",
-            "C:/", "D:/", "E:/", "F:/", "G:/", "H:/", "I:/", "J:/", "K:/", "L:/", "M:/",
-            "N:/", "O:/", "P:/", "Q:/", "R:/", "S:/", "T:/", "U:/", "V:/", "W:/", "X:/", "Y:/", "Z:/"
+        # Skip paths containing these placeholder directory names
+        MOCK_DIR_PATTERNS = [
+            "/some-dir/", "/some_dir/", "/somedir/",  # generic placeholder dirs
         ]
-        if any(path.startswith(root_path) for root_path in os_root_paths):
+        # Skip only if the path is JUST an example placeholder (not a real example directory)
+        MOCK_PATH_PATTERNS = [
+            "/example.py", "/example.js", "/example.ts",  # example.ext files
+            "/sample.py", "/sample.js", "/sample.ts",     # sample.ext files
+        ]
+        # Skip common OS root paths
+        if any(path.startswith(prefix) for prefix in OS_ROOT_PATHS):
             return False
 
         cand = Path(path.lstrip("/"))  # normalize absolute-like paths
-        if any(excl in str(cand).lower() for excl in MOCKS_TO_SKIP):
+        filename = cand.name.lower()
+        # Only skip mock patterns in the filename, not in directory names
+        if any(excl in filename for excl in MOCK_FILENAME_PATTERNS):
+            return False
+        # Skip paths with placeholder directory names
+        path_lower = path.lower()
+        if any(pattern in path_lower for pattern in MOCK_DIR_PATTERNS):
+            return False
+        # Skip explicit example/sample placeholder files
+        if any(path_lower.endswith(pattern) for pattern in MOCK_PATH_PATTERNS):
             return False
         if len(cand.parts) == 1:  # single/relative file
-            return self.contains_file(path, source)
+            return self.contains_file(cand.name, source)  # Use normalized filename
 
         # Check absolute paths
         # if Path(path).is_absolute():

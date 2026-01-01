@@ -44,6 +44,8 @@ dependencies = [
     "tree-sitter-ruby",
     "tree-sitter-go",
     "pydantic>=2.12.5",
+    "sentence-transformers>=5.2.0",
+    "numpy>=2.2.6",
 ]
 
 [project.urls]

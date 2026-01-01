@@ -57,13 +57,13 @@ PATTERN_DEFS = [
             r"(?:"
             r"(?:https?://)?localhost(?::\d+)?/(?![/*])"
             r"|"
-            r"/(?![/*])"
+            r"/(?![/*<>])"  # Don't start with < or > (HTML tags)
             r")"
-            r"(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/-]|{{|}}|<|>)+"
-            r"(?:\?(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?"
-            r"(?:#(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<|>)+)?"
+            r"(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/-]|{{|}}|<[A-Za-z0-9_]+>)+"  # Only allow <word> template params, not bare < or >
+            r"(?:\?(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<[A-Za-z0-9_]+>)+)?"
+            r"(?:#(?:[A-Za-z0-9._~!$&\'()*+,;=:@%/?-]|{{|}}|<[A-Za-z0-9_]+>)+)?"
         ),
-        "project_handler": "contains_string",
+        "project_handler": "contains_route",
         "rules": ["is_route_context"],
     },
 ]

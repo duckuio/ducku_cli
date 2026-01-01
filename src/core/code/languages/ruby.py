@@ -192,13 +192,21 @@ class RubyAnalyzer(LanguageAnalyzer):
             method_node = node.child_by_field_name("method")
             if method_node and method_node.type == "identifier":
                 method_name = method_node.text.decode("utf8")
-                if method_name in ("require", "require_relative"):
+                if method_name in ("require", "require_relative", "load"):
                     args_node = node.child_by_field_name("arguments")
                     if args_node:
                         for child in args_node.children:
                             if child.type == "string":
                                 module_str = child.text.decode("utf8").strip('\'"')
+                                # Add original path with slashes
                                 imports.add(module_str)
+                                # Also add normalized version with dots for matching
+                                normalized = module_str.replace('/', '.')
+                                imports.add(normalized)
+                                # Add just the filename without extension
+                                if '/' in module_str:
+                                    basename = module_str.split('/')[-1].replace('.rb', '')
+                                    imports.add(basename)
         
         # Recurse through children
         for child in node.children:

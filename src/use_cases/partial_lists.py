@@ -25,30 +25,22 @@ class PartialMatch(BaseUseCase):
             e1s = [str(e) for e in e1.entities]
             for e2 in docs_containers:
                 e2s = [e.content for e in e2.entities]
-                # Uncomment only if there are really such cases in reality. For now skipping
-                # @TODO Performace improvement, use sorted tuples of indexes instead
-                # key = (
-                #     frozenset(normalize_string(s) for s in e1s),
-                #     frozenset(normalize_string(s) for s in e2s),
-                # )
-
-                # # if something has already matched, don't consider it anymore to prevent double comparison
-                # if key in seen_pairs:
-                #     continue
 
                 match = fuzzy_intersection(e1s, e2s, False)
                 
                 if not match:
                     continue
                 
+                if not match.only_a:
+                    # We only care about missing items in docs compared to project code
+                    continue
                 e1_from = e1.parent + " (" + e1.type + ")"
                 e2_from = e2.parent + " (" + e2.type + ")"
                 report += "Partial match found:\n"
                 report += " - From project: " + ", ".join(e1s) + " " + e1_from + " \n"
                 report += " - From docs:  " + ", ".join(e2s) + " " + e2_from + "\n"
                 
-                if match.only_a:
-                    report += " 🔴 Missing in docs: " + ", ".join(match.only_a) + "\n"
+                report += " 🔴 Missing in docs: " + ", ".join(match.only_a) + "\n"
                 # Code is the source of truth; do not report items missing in project
                 
                 report += "Debug: " + ", ".join(match.matched_debug) + "\n"

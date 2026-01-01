@@ -52,9 +52,112 @@ class UnusedModules(BaseUseCase):
         ]
         
         return any(pattern in file_str for pattern in test_patterns)
+    
+    def is_entry_point_file(self, file_path: Path) -> bool:
+        """Check if file is likely an entry point (executable, main file, framework convention)."""
+        file_str = str(file_path).lower()
+        
+        # Entry point patterns (global)
+        entry_patterns = [
+            '/bin/',           # Executable scripts
+            '/features/step_definitions/',  # Cucumber steps (auto-loaded)
+            '/features/support/',           # Cucumber support files
+            '/vendor/',        # Vendored dependencies (bundled gems, loaded dynamically)
+            '/packages/',      # Monorepo packages (each has its own entry points)
+        ]
+        
+        # Check patterns
+        if any(pattern in file_str for pattern in entry_patterns):
+            return True
+        
+        # Check if it's named like a main entry point
+        file_name = file_path.name.lower()
+        if file_name in ('main.py', 'main.rb', 'main.js', 'main.ts', 'main.java', 
+                         'index.py', 'index.rb', 'index.js', 'index.ts',
+                         'cli.py', 'cli.rb', 'cli.js', 'cli.ts',
+                         '__main__.py', 'app.py', 'app.rb', 'server.py', 'server.rb'):
+            return True
+        
+        # Language-specific entry point detection
+        ext = file_path.suffix.lower()
+        if self._is_language_specific_entry_point(file_path, ext):
+            return True
+        
+        # Check if file name matches project name (common entry point pattern)
+        file_stem = file_path.stem.lower()
+        
+        # Handle both string and Path objects for project_root
+        if isinstance(self.project.project_root, Path):
+            project_root_name = self.project.project_root.name.lower()
+        else:
+            project_root_name = Path(self.project.project_root).name.lower()
+        
+        # Remove common prefixes/suffixes to find the core name
+        for prefix in ['aws-', 'aws_', 'amazon-', 'amazon_']:
+            if project_root_name.startswith(prefix):
+                project_root_name = project_root_name[len(prefix):]
+                break
+        
+        # If the file stem contains the project name, it might be an entry point
+        if project_root_name in file_stem or file_stem in project_root_name:
+            return True
+        
+        return False
+    
+    def _is_language_specific_entry_point(self, file_path: Path, ext: str) -> bool:
+        """Check language-specific patterns for entry points and non-imported files."""
+        file_name = file_path.name.lower()
+        file_str = str(file_path).lower()
+        
+        # Ruby-specific
+        if ext == '.rb':
+            ruby_entry_patterns = ['winagent', 'register.rb']
+            if any(pattern in file_str for pattern in ruby_entry_patterns):
+                return True
+        
+        # JavaScript-specific
+        elif ext == '.js':
+            # Config files (used by build tools, not imported)
+            js_config_patterns = [
+                'webpack.config', 'rollup.config', 'vite.config', 'babel.config',
+                'jest.config', 'eslint.config', 'prettier.config', 'postcss.config',
+                'tailwind.config', 'next.config', 'nuxt.config', 'svelte.config',
+                '.config.js'  # Generic config suffix
+            ]
+            if any(pattern in file_name for pattern in js_config_patterns):
+                return True
+        
+        # TypeScript-specific
+        elif ext == '.ts':
+            # Declaration files are type definitions, not imported directly
+            if file_name.endswith('.d.ts'):
+                return True
+            # Config files
+            ts_config_patterns = [
+                'webpack.config', 'rollup.config', 'vite.config',
+                'jest.config', 'eslint.config', '.config.ts'
+            ]
+            if any(pattern in file_name for pattern in ts_config_patterns):
+                return True
+        
+        # Java-specific
+        elif ext == '.java':
+            # Model/DTO classes in certain paths are often used via reflection
+            # (JSON serialization, Eclipse plugin extension points, etc.)
+            java_reflection_patterns = [
+                '/models/',       # Model/DTO classes
+                '/model/',        # Model/DTO classes
+                '/dto/',          # Data Transfer Objects
+                '/entities/',     # JPA entities
+                '/handlers/',     # Eclipse handlers (registered via plugin.xml)
+            ]
+            if any(pattern in file_str for pattern in java_reflection_patterns):
+                return True
+        
+        return False
 
     def collect_all_modules(self) -> Dict[str, Path]:
-        """Collect all potential modules in the project, excluding test files."""
+        """Collect all potential modules in the project, excluding test files and entry points."""
         modules = {}
         
         for file in self.project.project_files:
@@ -62,6 +165,10 @@ class UnusedModules(BaseUseCase):
             
             # Skip test files
             if self.is_test_file(file_path):
+                continue
+            
+            # Skip entry point files (they're meant to be executed, not imported)
+            if self.is_entry_point_file(file_path):
                 continue
             
             # Check if file is supported
@@ -78,7 +185,7 @@ class UnusedModules(BaseUseCase):
         for file in self.project.project_files:
             file_path = Path(file)  # file is already a CachedPath (which inherits from Path)
             
-            # Check if file is supported
+            # Check if file is supported - now including test files since they use modules
             if is_supported_format(file_path.suffix.lower()):
                 imports = collect_imports_from_content(file_path)
                 all_imports.update(imports)
@@ -91,6 +198,16 @@ class UnusedModules(BaseUseCase):
                     for i in range(1, len(parts) + 1):
                         sub_import = '.'.join(parts[-i:])  # Get suffix parts
                         all_imports.add(sub_import)
+                    
+                    # For Ruby/Unix paths with slashes, also split those
+                    if '/' in import_name:
+                        slash_parts = import_name.split('/')
+                        for i in range(1, len(slash_parts) + 1):
+                            sub_import = '/'.join(slash_parts[-i:])
+                            all_imports.add(sub_import)
+                            # Also add dot-separated version
+                            sub_import_dots = '.'.join(slash_parts[-i:])
+                            all_imports.add(sub_import_dots)
         
         return all_imports
 
