@@ -1,0 +1,24 @@
+name: 'Ducku Documentation Checker'
+description: 'Static analysis tool to detect outdated artifacts in documentation - finds stale paths, ports, env vars, routes, and more'
+author: 'yarax'
+
+branding:
+  icon: 'file-text'
+  color: 'yellow'
+
+inputs:
+  path:
+    description: 'Path to the project to analyze (relative to repository root)'
+    required: false
+    default: '.'
+  fail-on-issues:
+    description: 'Fail the workflow if issues are found'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'docker'
+  image: 'docker://yarax/ducku:latest'
+  env:
+    PROJECT_PATH: ${{ github.workspace }}/${{ inputs.path }}
+    DUCKU_FAIL_ON_ISSUES: ${{ inputs.fail-on-issues }}

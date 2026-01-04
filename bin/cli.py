@@ -44,7 +44,12 @@ def start(base):
                 print(r)
             else:  # No issues found
                 print(f"{Colors.BRIGHT_GREEN}✅ No issues found{Colors.RESET}\n")
-        if p.config.fail_on_issues and found:
+        
+        # Check fail-on-issues: config file takes precedence, then env var
+        fail_on_issues = p.config.fail_on_issues
+        if fail_on_issues is None:
+            fail_on_issues = os.getenv("DUCKU_FAIL_ON_ISSUES", "true").lower() == "true"
+        if fail_on_issues and found:
             exit(1)
     except Exception as e:
         print(e)
